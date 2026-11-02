@@ -177,6 +177,8 @@ label { display: block; font-size: 10px; letter-spacing: .1em; text-transform: u
 /* ---------- views ---------- */
 body:not(.v-explore) :is(#title, #left, #live, #memorial, #timeline, #credits, #detail, #tooltip, #swiftLabel) { opacity: 0 !important; pointer-events: none !important; }
 body:not(.v-tribute) :is(#cineUi, #caption, #callout, #endCard) { opacity: 0 !important; pointer-events: none !important; }
+/* children that opt back in with pointer-events:auto must not stay clickable while their view is hidden */
+body:not(.v-tribute) :is(#cineUi, #endCard) *, body:not(.v-explore) :is(#title, #left, #live, #memorial, #timeline, #credits, #detail) * { pointer-events: none !important; }
 
 /* ---------- tribute overlay ---------- */
 #caption { position: fixed; left: 0; right: 0; bottom: 17vh; z-index: 12; text-align: center; pointer-events: none; padding: 0 24px;
@@ -257,7 +259,8 @@ body.v-tribute #endCard.on { opacity: 1 !important; }
 #nowPlaying.mini:not(:hover) .np-title { font-size: 11.5px; display: inline; }
 #nowPlaying.mini:not(:hover) .np-mute { width: 26px; height: 26px; border-color: transparent; background: transparent; opacity: .7; }
 #nowPlaying.mini:not(:hover) .np-mute svg { width: 15px; height: 15px; }
-.end-music { display: inline-block; margin-top: 14px; font-size: 12px; color: #d9c3ae; letter-spacing: .04em; text-shadow: 0 0 8px #000; pointer-events: auto; }
+.end-music { display: inline-block; margin-top: 14px; font-size: 12px; color: #d9c3ae; letter-spacing: .04em; text-shadow: 0 0 8px #000; }
+#endCard.on .end-music { pointer-events: auto; }
 #credits a { color: #7d8597; }
 @media (max-width: 820px) {
   #nowPlaying { top: 56px; left: 12px; padding: 6px; }

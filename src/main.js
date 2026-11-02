@@ -556,6 +556,9 @@ function setView(v) {
   state.view = v;
   document.body.classList.remove('v-start', 'v-tribute', 'v-explore');
   document.body.classList.add('v-' + v);
+  // hidden views must not take clicks or keyboard focus
+  for (const id of ['cineUi', 'endCard']) $(id).inert = v !== 'tribute';
+  for (const id of ['title', 'left', 'live', 'memorial', 'timeline', 'credits', 'detail']) $(id).inert = v !== 'explore';
 }
 setView('start');
 camera.position.copy(introFrom);
