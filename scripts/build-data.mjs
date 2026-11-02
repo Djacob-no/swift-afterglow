@@ -111,7 +111,9 @@ for (const line of lines.slice(1)) {
   const measured = (s) => !NA(s) && !/^\s*[<>]/.test(s) && !/[<>]/.test(s);
   const xrtStatus = xrt.ra != null || [17, 18, 19, 20, 21, 22].some((i) => measured(c[i])) ? 'det'
     : !NA(c[16]) || [17, 18, 19].some((i) => !NA(c[i])) ? 'obs' : null;
-  const uvotStatus = uvot.ra != null || measured(c[27]) ? 'det'
+  // other filters look like "B>19.2|U=18.80|White=20.41": any "=" value is a detection
+  const otherFilterDet = c[28].split('|').some((p) => /=/.test(p) && !/[<>]/.test(p));
+  const uvotStatus = uvot.ra != null || measured(c[27]) || otherFilterDet ? 'det'
     : !NA(c[26]) || !NA(c[27]) || !NA(c[28]) ? 'obs' : null;
   const { z, zType } = redshift(c[30]);
   const gcn = [...new Set([...c[33].matchAll(/GCN\s*(\d+)/g)].map((m) => +m[1]))];
@@ -123,6 +125,8 @@ for (const line of lines.slice(1)) {
     fluence: flu?.v ?? null, fluenceQ: flu?.q ?? null,
     peakFlux: peak?.v ?? null,
     z, zType, zRaw: NA(c[30]) ? null : c[30].trim(),
+    // BAT: 17 bursts were found by other missions and only followed up by Swift (no BAT data at all)
+    bat: [3, 5, 6, 7, 9, 11].some((i) => measured(c[i])) ? 'det' : null,
     xrt: xrtStatus, uvot: uvotStatus,
     xrtDelay: xdt?.v ?? null,
     otherObs: NA(c[29]) ? null : c[29].trim(),
@@ -146,7 +150,7 @@ if (bursts.length < 2000) problems.push(`only ${bursts.length} rows`);
 const nulls = (k) => bursts.filter((b) => b[k] == null).length;
 console.log(`rows: ${bursts.length}  (${bursts[0].id} → ${bursts.at(-1).id})`);
 console.log(`nulls: position ${nulls('ra')}, t90 ${nulls('t90')}, fluence ${nulls('fluence')}, peakFlux ${nulls('peakFlux')}, z ${nulls('z')}, time-of-day unknown ${bursts.filter((b) => !b.timeKnown).length}`);
-console.log(`XRT det/obs: ${bursts.filter((b) => b.xrt === 'det').length}/${bursts.filter((b) => b.xrt === 'obs').length}, UVOT det/obs: ${bursts.filter((b) => b.uvot === 'det').length}/${bursts.filter((b) => b.uvot === 'obs').length}`);
+console.log(`BAT det: ${bursts.filter((b) => b.bat === 'det').length}, XRT det/obs: ${bursts.filter((b) => b.xrt === 'det').length}/${bursts.filter((b) => b.xrt === 'obs').length}, UVOT det/obs: ${bursts.filter((b) => b.uvot === 'det').length}/${bursts.filter((b) => b.uvot === 'obs').length}`);
 console.log(`position source: UVOT ${bursts.filter((b) => b.posSrc === 'UVOT').length}, XRT ${bursts.filter((b) => b.posSrc === 'XRT').length}, BAT ${bursts.filter((b) => b.posSrc === 'BAT').length}`);
 const delays = bursts.map((b) => b.xrtDelay).filter((v) => v != null).sort((a, b) => a - b);
 console.log(`XRT time to first observation: median ${delays[delays.length >> 1]} s (n=${delays.length})`);
@@ -170,7 +174,7 @@ if (problems.length) {
 
 // ---------- write (columnar, compact) ----------
 const FIELDS = ['id', 't', 'timeKnown', 'trigger', 'ra', 'dec', 'posSrc', 'errArcsec', 't90', 't90Q', 'fluence', 'fluenceQ', 'peakFlux',
-  'z', 'zType', 'zRaw', 'xrt', 'uvot', 'xrtDelay', 'otherObs', 'host', 'gcn', 'advocate'];
+  'z', 'zType', 'zRaw', 'bat', 'xrt', 'uvot', 'xrtDelay', 'otherObs', 'host', 'gcn', 'advocate'];
 fs.mkdirSync(OUT, { recursive: true });
 const grbs = { source, count: bursts.length, fields: FIELDS, rows: bursts.map((b) => FIELDS.map((f) => b[f])) };
 fs.writeFileSync(path.join(OUT, 'grbs.json'), JSON.stringify(grbs));

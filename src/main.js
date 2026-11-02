@@ -22,6 +22,8 @@ const EARTH_KM = 6371;
 const DPR = Math.min(window.devicePixelRatio, 2);
 const BASE_DAYS_PER_SEC = SPAN_DAYS / 90; // 22 years in 90 s at 1x
 const $ = (id) => document.getElementById(id);
+// escape text for HTML attributes/content (data files contain quotes, e.g. the USSF note)
+const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 
 // ---------- renderer / scene ----------
 const canvas = $('scene');
@@ -282,7 +284,7 @@ const state = {
   now: SPAN_DAYS, playing: false, speed: 1,
   filter: 'all', zOnly: false, selected: -1, hover: -1,
   mode: params.get('mode') === 'memorial' ? 'memorial' : STATUS.mode,
-  warp: 1, orbitTime: Date.now(),
+  warp: 1, orbitTime: Date.now(), warpOffset: 0,
   view: 'start',
 };
 const swiftWorld = new THREE.Vector3();
@@ -312,6 +314,7 @@ $('zToggle').onclick = () => {
 for (const b of $('warpChips').querySelectorAll('button')) {
   b.onclick = () => {
     state.warp = +b.dataset.w;
+    if (state.warp === 1) state.warpOffset = 0; // back to real time means back to *now*
     $('warpChips').querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b));
   };
 }
@@ -351,7 +354,7 @@ function applyMode() {
   $('memorial').classList.toggle('hidden', !mem);
   $('swiftLabel').style.display = mem ? 'none' : '';
   $('modeToggle').textContent = mem ? 'Back to live mode' : 'Preview memorial mode';
-  $('memEnd').textContent = (STATUS.reentryTime ?? '2026-11-03').slice(0, 10);
+  $('memEnd').textContent = STATUS.reentryTime ? STATUS.reentryTime.slice(0, 10) : '2026';
   $('memLink').href = MISSION.nasaStatement;
 }
 $('modeToggle').onclick = () => {
@@ -373,12 +376,12 @@ const bandPct = (t) => ((t - bandStart) / (bandEnd - bandStart)) * 100;
     if (p.start && p.end) {
       const s = bandPct(Date.parse(p.start)), e = bandPct(Date.parse(p.end));
       html += `<div class="band-row">${label}<div class="band-track">
-        <div class="band ${p.fuzzy ? 'fuzzy' : ''}" style="left:${s}%;width:${e - s}%" title="${p.source}: ${p.note}">
+        <div class="band ${p.fuzzy ? 'fuzzy' : ''}" style="left:${s}%;width:${e - s}%" title="${esc(p.source)}: ${esc(p.note)}">
         <div class="ctr" style="left:${((c - s) / (e - s)) * 100}%"></div></div></div></div>`;
     } else {
       // no usable window (e.g. TIP still weeks wide): nominal time only
       html += `<div class="band-row">${label}<div class="band-track">
-        <div class="ctr solo" style="left:${c}%" title="${p.source}: ${p.note}"></div></div></div>`;
+        <div class="ctr solo" style="left:${c}%" title="${esc(p.source)}: ${esc(p.note)}"></div></div></div>`;
     }
   }
   html += '<div class="axis">';
@@ -404,10 +407,14 @@ function updateLiveHud(nowMs) {
   const earliest = earliestWindow;
   const real = Date.now();
   $('cdMain').textContent = real < earliest ? fmtDur(earliest - real) : 'window open';
-  $('cdList').innerHTML = PREDICTIONS.map((p) => {
+  if (!$('cdList').children.length) {
+    $('cdList').innerHTML = PREDICTIONS.map((p) =>
+      `<li><a href="${esc(p.url)}" target="_blank" rel="noopener">${esc(p.source)}</a><span class="mono" title="${esc(p.note)}"></span></li>`).join('');
+  }
+  PREDICTIONS.forEach((p, i) => {
     const c = Date.parse(p.center);
-    return `<li><a href="${p.url}" target="_blank" rel="noopener">${p.source}</a><span class="mono" title="${p.note}">${localFmt.format(c)} · ${fmtDur(c - real)}</span></li>`;
-  }).join('');
+    $('cdList').children[i].querySelector('span').textContent = `${localFmt.format(c)} · ${fmtDur(c - real)}`;
+  });
   const nl = $('nowline');
   nl.style.left = `calc(66px + (100% - 66px) * ${THREE.MathUtils.clamp(bandPct(real), 0, 100) / 100})`;
   return halfKm;
@@ -437,7 +444,7 @@ function showDetail(i) {
       <dt>Redshift</dt><dd>${g.z == null ? fmt(null) : `z = ${g.z}${g.zType === 'phot' ? ' <small>(photometric)</small>' : ''}`}</dd>
       ${g.xrtDelay != null && g.xrtDelay < 3600 ? `<dt>X-ray look</dt><dd>${Math.round(g.xrtDelay)} s after trigger</dd>` : ''}
       <dt>Instruments</dt><dd>${['BAT', 'XRT', 'UVOT'].map((k) => {
-        const st = k === 'BAT' ? 'det' : g[k.toLowerCase()];
+        const st = g[k.toLowerCase()];
         const tip = st === 'det' ? 'detected' : st === 'obs' ? 'looked, nothing detected (upper limit)' : 'no data';
         return `<span class="inst ${st === 'det' ? 'y' : st === 'obs' ? 'o' : ''}" title="${k}: ${tip}">${k}${st === 'obs' ? ' ○' : ''}</span>`;
       }).join('')}</dd>
@@ -663,15 +670,15 @@ function updateFlashLabel(T) {
   calloutEl.classList.add('on');
 }
 
-canvas.addEventListener('wheel', () => (cine.userZoomed = true), { passive: true });
-canvas.addEventListener('touchstart', (e) => { if (e.touches.length > 1) cine.userZoomed = true; }, { passive: true });
+canvas.addEventListener('wheel', () => { if (cine.orbiting) cine.userZoomed = true; }, { passive: true });
+canvas.addEventListener('touchstart', (e) => { if (cine.orbiting && e.touches.length > 1) cine.userZoomed = true; }, { passive: true });
 
 function runTribute(dt) {
   if (!cine.done) {
     // the song is the master clock while it plays; otherwise run on our own
     const songT = music.currentTime;
     if (cineAt != null) cine.t = cineAt;
-    else if (musicOn && !music.paused && songT > 0.05 && Math.abs(songT - cine.t) < 4) cine.t = songT;
+    else if (musicOn && !music.paused && songT > 0.05) cine.t = songT; // stays locked even after buffering or a background tab
     else cine.t += dt;
   }
   const T = cine.t;
@@ -745,9 +752,12 @@ const bufferMusic = () => setTimeout(() => {
 if (document.readyState === 'complete') bufferMusic(); else addEventListener('load', bufferMusic, { once: true });
 const MUSIC_VOL = 0.6;
 let musicOn = localStorage.getItem('sa-music') !== 'off';
+let fadeId = 0;
 function fadeMusic(to, ms = 1500) {
+  const id = ++fadeId; // a newer fade cancels this one (e.g. unmute during a fade-out)
   const from = music.volume, t0 = performance.now();
   const step = () => {
+    if (id !== fadeId) return;
     const k = Math.min((performance.now() - t0) / ms, 1);
     music.volume = from + (to - from) * k;
     if (k < 1) requestAnimationFrame(step); else if (to === 0) music.pause();
@@ -765,13 +775,19 @@ function setMusic(on) {
     music.volume = 0; music.play().catch(() => {}); fadeMusic(MUSIC_VOL);
   } else fadeMusic(0, 400);
 }
+const closeTimers = {};
 function closeDialog(id) {
   $(id).classList.add('closing');
-  setTimeout(() => $(id).classList.add('hidden'), 700);
+  clearTimeout(closeTimers[id]);
+  closeTimers[id] = setTimeout(() => $(id).classList.add('hidden'), 700);
+}
+function openDialog(id) {
+  clearTimeout(closeTimers[id]);
+  $(id).classList.remove('hidden', 'closing');
 }
 $('aboutPlay').onclick = () => { closeDialog('about'); enterTribute(); };
 $('skipToData').onclick = () => { closeDialog('about'); enterExplore(); };
-$('aboutOpen').onclick = () => $('help').classList.remove('hidden', 'closing');
+$('aboutOpen').onclick = () => openDialog('help');
 $('helpClose').onclick = () => closeDialog('help');
 $('muteToggle').onclick = $('npMute').onclick = () => setMusic(!musicOn);
 function syncNpMute() {
@@ -817,10 +833,13 @@ function countAt(now) {
 }
 
 function frame() {
-  const dt = Math.min(clock.getDelta(), 0.1);
+  const rawDt = clock.getDelta();
+  const dt = Math.min(rawDt, 0.1); // animation step; capped so a long pause doesn't make things jump
 
-  // orbit clock (real time, optionally warped)
-  state.orbitTime += dt * 1000 * state.warp;
+  // orbit clock: wall-clock time plus whatever extra the ×60/×600 warp has added. Uses the uncapped
+  // frame time, so after a backgrounded tab the dot is back where Swift really is.
+  state.warpOffset += rawDt * 1000 * (state.warp - 1);
+  state.orbitTime = Date.now() + state.warpOffset;
   const od = new Date(state.orbitTime);
   earth.rotation.y = gmst(od);
   eqToThree(sunDirEq(od), 1, sunUniform.value);
@@ -891,4 +910,4 @@ addEventListener('resize', () => {
   composer.setSize(innerWidth, innerHeight);
 });
 
-if (import.meta.env.DEV) window.__sa = { camera, grbUniforms, grbPos, boatIdx, state, GRBS, music, cine, controls, label, swiftState, getSwift: () => swift, gmst, sunDirEq, eqToThree, radecToEq, earth };
+if (import.meta.env.DEV || params.has('debug')) window.__sa = { camera, grbUniforms, grbPos, boatIdx, state, GRBS, music, cine, controls, label, swiftState, getSwift: () => swift, gmst, sunDirEq, eqToThree, radecToEq, earth };

@@ -46,7 +46,7 @@ export function buildCues({ total, burstAt, memorial, reentryDate }) {
     { at: 91.5, text: 'Hundreds of people in the US, UK and Italy built and ran Swift.<br>It carries the name of its leader, Neil Gehrels.' },
     { at: burstAt('221009A') - 1, burst: '221009A', text: 'October 2022: the brightest burst ever recorded.<br>Maybe a once-in-10,000-years event.' },
     { at: 107, text: 'For 22 years, Swift never stopped watching.' },
-    { at: 114.5, text: memorial ? `On ${reentryDate}, it came home.` : 'This week, it falls home.' },
+    { at: 114.5, text: !memorial ? 'This week, it falls home.' : reentryDate ? `On ${reentryDate}, it came home.` : 'And then, Swift came home.' },
   ].sort((x, y) => x.at - y.at);
   // each line stays until just before the next (capped), the last one until the end card
   cues.forEach((c, i) => {
