@@ -1,0 +1,44 @@
+{
+  "updated": "2026-11-02T11:15:00Z",
+  "note": "Hand-maintained. Refresh before each deploy; sources disagree, so all are shown with their own windows.",
+  "predictions": [
+    {
+      "source": "Aerospace CORDS",
+      "url": "https://aerospace.org/reentries/28485",
+      "center": "2026-11-04T09:30:00Z",
+      "start": "2026-11-03T07:30:00Z",
+      "end": "2026-11-05T11:30:00Z",
+      "issued": null,
+      "epoch": "2026-10-30T00:37:00Z",
+      "note": "±26 h · based on a stale 30 Oct orbit (site blocks automated checks; last read manually 2026-11-02)"
+    },
+    {
+      "source": "Michigan SWORD",
+      "url": "https://tohuvavohu.com/swift-last-light/",
+      "center": "2026-11-03T17:33:00Z",
+      "start": "2026-11-03T09:31:00Z",
+      "end": "2026-11-04T01:31:00Z",
+      "issued": "2026-11-01",
+      "note": "90% window, ensemble at 80 km (as shown on the Last Light page)"
+    },
+    {
+      "source": "Space-Track TIP",
+      "url": "https://keeptrack.space/reentry-watch/reentry-28485",
+      "center": "2026-11-04T00:30:00Z",
+      "start": null,
+      "end": null,
+      "issued": "2026-11-01T00:28:00Z",
+      "note": "TIP window still 840 h wide, so only the nominal time is shown (via KeepTrack)"
+    },
+    {
+      "source": "US Space Force",
+      "url": "https://fly-marshall.com/article/nasa-swift-observatory-reentry-nov6-swft06",
+      "center": "2026-11-06T12:00:00Z",
+      "start": "2026-11-06T00:00:00Z",
+      "end": "2026-11-06T23:59:00Z",
+      "issued": null,
+      "note": "\"on or around Nov 6\" (as reported by AP / SatNews)",
+      "fuzzy": true
+    }
+  ]
+}

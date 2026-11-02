@@ -6,7 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "data": "node scripts/build-data.mjs",
+    "data:offline": "node scripts/build-data.mjs --offline",
+    "tle": "node scripts/fetch-tle.mjs",
+    "prebuild": "node scripts/build-data.mjs --offline"
   },
   "dependencies": {
     "three": "^0.187.0"

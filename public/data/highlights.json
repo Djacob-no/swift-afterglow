@@ -1,0 +1,38 @@
+[
+  {
+    "id": "221009A",
+    "title": "The BOAT",
+    "blurb": "\"Brightest Of All Time\". The brightest gamma-ray burst ever recorded, estimated as a once-in-10,000-years event.",
+    "url": "https://www.jpl.nasa.gov/news/brightest-cosmic-explosion-ever-detected-had-other-unique-features/"
+  },
+  {
+    "id": "090423",
+    "title": "From the cosmic dawn",
+    "blurb": "At redshift about 8, its light set out roughly 13 billion years ago, when the universe was about 630 million years old.",
+    "url": "https://www3.nasa.gov/mission_pages/swift/bursts/cosmic_record.html"
+  },
+  {
+    "id": "050904",
+    "title": "Distance record, 2005",
+    "blurb": "At redshift 6.29, the most distant explosion known when Swift caught it.",
+    "url": "https://arxiv.org/abs/astro-ph/0509766"
+  },
+  {
+    "id": "130427A",
+    "title": "Nearby monster",
+    "blurb": "One of the most energetic bursts ever seen, and unusually close, at redshift 0.34.",
+    "url": "https://www.nasa.gov/universe/nasa-sees-watershed-cosmic-blast-in-unique-detail/"
+  },
+  {
+    "id": "080319B",
+    "title": "The naked-eye burst",
+    "blurb": "Its optical flash was briefly bright enough to see without a telescope, from 7.5 billion light-years away.",
+    "url": "https://www3.nasa.gov/centers/goddard/news/topstory/2008/brightest_grb.html"
+  },
+  {
+    "id": "060614",
+    "title": "The burst that broke the rules",
+    "blurb": "A long burst with no supernova, which challenged the simple long/short picture.",
+    "url": "https://swift.gsfc.nasa.gov/results/publist/Gehrels_Nature_444_1044_2006.pdf"
+  }
+]
