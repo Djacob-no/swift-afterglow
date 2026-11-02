@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Swift Afterglow — prototype</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Ccircle cx=%228%22 cy=%228%22 r=%225%22 fill=%22%23ff9a4a%22/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <canvas id="scene"></canvas>
+
+  <div id="about" role="dialog" aria-modal="true" aria-labelledby="aboutTitle">
+    <div class="about-card start-card">
+      <h2 id="aboutTitle" class="start-title">SWIFT <span>AFTERGLOW</span></h2>
+      <p class="start-line">A tribute to NASA's Swift telescope, which spent 22 years watching stars die, and falls back to Earth this week.</p>
+      <button id="aboutPlay" class="about-play">▶ Play</button>
+      <div class="about-fine">Best with sound 🔊 · music from <em>Outer Wilds</em></div>
+      <button id="skipToData" class="linkbtn">Skip to the data →</button>
+    </div>
+  </div>
+
+  <div id="help" class="hidden" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+    <div class="about-card">
+      <div class="about-kicker">SWIFT AFTERGLOW</div>
+      <h2 id="helpTitle">What am I looking at?</h2>
+      <section>
+        <i class="ico ico-swift"></i>
+        <div>
+          <h4>Swift is a space telescope</h4>
+          <p>NASA launched Swift in 2004. Its job was to spot the biggest explosions in the universe and point its cameras at them within about a minute. It was built to last 2 years and kept working for 22. Its orbit has now decayed, and <b>it will burn up in Earth's atmosphere this week.</b></p>
+        </div>
+      </section>
+
+      <section>
+        <i class="ico ico-burst"></i>
+        <div>
+          <h4>Each blinking light is a gamma-ray burst</h4>
+          <p>A gamma-ray burst happens when a giant star collapses into a black hole, or when two dead stars smash together. For a few seconds it outshines entire galaxies. They're so far away that the light is often older than Earth. Swift caught <b>2,046</b> of them. Each light sits in the part of the sky the burst came from.</p>
+        </div>
+      </section>
+
+      <section>
+        <i class="ico ico-glow"></i>
+        <div>
+          <h4>The afterglow is the fading light that comes after</h4>
+          <p>The flash itself is over in seconds. What's left glows for hours or days, then fades. Catching that <b>afterglow</b> was Swift's specialty: it tells scientists how far away the explosion was and what caused it. The orange embers you'll see are those afterglows.</p>
+        </div>
+      </section>
+
+      <section>
+        <i class="ico ico-earth"></i>
+        <div>
+          <h4>The planet is Earth, and the white dot is Swift</h4>
+          <p>The dot shows roughly where Swift is right now, about 210 km up and dropping. Nobody knows exactly when or where it will come down, so the site shows every forecast side by side.</p>
+        </div>
+      </section>
+
+      <div class="about-how">Drag to look around · scroll to zoom · click any light for details · press ▶ to replay all 22 years</div>
+      <button id="helpClose" class="about-play">Got it</button>
+    </div>
+  </div>
+
+  <div id="caption" aria-live="polite"></div>
+  <div id="callout"><i></i><span><b></b><small></small></span></div>
+  <div id="cineUi">
+    <div id="cineReadout" class="mono"></div>
+    <div id="nowPlaying" class="np-hidden">
+      <a class="np-link" href="https://annapurnainteractive.com/games/outer-wilds" target="_blank" rel="noopener" title="Outer Wilds, by Mobius Digital and Annapurna Interactive">
+        <img src="/credits/outer-wilds.jpg" alt="Outer Wilds" width="128" height="72" />
+        <span class="np-text">
+          <span class="np-kicker">♪ Now playing</span>
+          <span class="np-title">Travelers</span>
+          <span class="np-artist">Andrew Prahlow · from <em>Outer Wilds</em> <span class="np-arrow">↗</span></span>
+        </span>
+      </a>
+      <button id="npMute" class="np-mute" aria-label="Mute music" title="Mute music">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path class="spk" d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/>
+          <path class="wave" d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/>
+          <path class="x" d="M16 9.5l5 5m0-5l-5 5"/></svg>
+      </button>
+    </div>
+    <div class="cine-corner">
+      <button id="toExplore" class="explore-btn">Explore the data <span class="arr">→</span></button>
+    </div>
+  </div>
+  <div id="endCard">
+    <div class="end-title">SWIFT <span>AFTERGLOW</span></div>
+    <div class="end-sub">Neil Gehrels Swift Observatory · 2004 – 2026</div>
+    <a class="end-music" href="https://annapurnainteractive.com/games/outer-wilds" target="_blank" rel="noopener">Music: “Travelers” by Andrew Prahlow, from <em>Outer Wilds</em> ↗</a>
+    <div class="end-btns">
+      <button id="watchAgain" class="ghost">↻ Watch again</button>
+      <button id="endExplore" class="ghost">Explore the data →</button>
+    </div>
+  </div>
+
+  <header id="title">
+    <h1>SWIFT <span>AFTERGLOW</span></h1>
+    <p>Every gamma-ray burst NASA's Swift saw, 2004–2026</p>
+    <div class="row">
+      <span class="badge">MOCK DATA · PROTOTYPE</span>
+      <button id="watchTribute" class="ghost">▶ Watch the tribute</button>
+      <button id="aboutOpen" class="ghost" title="What is this?">? What is this</button>
+      <button id="muteToggle" class="ghost" title="Music on/off">♪ Music on</button>
+      <button id="modeToggle" class="ghost">Preview memorial mode</button>
+    </div>
+  </header>
+
+  <aside id="left" class="panel">
+    <h3>Notable bursts</h3>
+    <ul id="highlights"></ul>
+    <h3>Filter</h3>
+    <div class="chips" id="filterChips">
+      <button data-f="all" class="on">All</button>
+      <button data-f="long">Long</button>
+      <button data-f="short">Short &lt;2 s</button>
+    </div>
+    <div class="chips"><button id="zToggle">Has redshift</button></div>
+    <h3>Legend</h3>
+    <div class="legend">
+      <div><i class="dot hot"></i> new burst flash · size = log fluence, fade = T90</div>
+      <div><i class="dot ember"></i> afterglow (past burst)</div>
+      <div><i class="line gal"></i> galactic plane</div>
+      <div><i class="line ecl"></i> ecliptic</div>
+      <p class="caption">GRBs come from every direction: they ignore the Milky Way's plane because they're billions of light-years away.</p>
+    </div>
+  </aside>
+
+  <aside id="live" class="panel">
+    <div class="live-head"><span class="pulse"></span> SWIFT · LIVE ORBIT</div>
+    <div class="stats">
+      <div><label>Altitude</label><b id="alt">≈210 km</b></div>
+      <div><label>TLE age</label><b id="tleAge">–</b></div>
+      <div><label>Position ±</label><b id="unc">–</b></div>
+    </div>
+    <div class="countdown">
+      <label>Earliest plausible reentry</label>
+      <div id="cdMain" class="big mono">–</div>
+      <ul id="cdList"></ul>
+    </div>
+    <div id="bands"></div>
+    <div class="row small">
+      <span>Orbit speed</span>
+      <div class="chips" id="warpChips">
+        <button data-w="1" class="on">real-time</button>
+        <button data-w="60">×60</button>
+        <button data-w="600">×600</button>
+      </div>
+    </div>
+    <p class="fine">TLE propagation is unreliable at ~200 km. The arc shows along-track uncertainty, not a reentry location.</p>
+  </aside>
+
+  <aside id="memorial" class="panel hidden">
+    <div class="mem-name">Neil Gehrels Swift Observatory</div>
+    <div class="mem-dates mono">2004-11-20 → <span id="memEnd">2026-11-03</span></div>
+    <p>22 years in orbit, ten times its design life. 2,046 gamma-ray bursts caught.</p>
+    <a id="memLink" target="_blank" rel="noopener">NASA's statement →</a>
+  </aside>
+
+  <section id="detail" class="panel hidden"></section>
+
+  <footer id="timeline">
+    <button id="play" class="playbtn">▶ Replay 2004 → 2026</button>
+    <select id="speed" title="Playback speed">
+      <option value="0.25">¼×</option>
+      <option value="0.5">½×</option>
+      <option value="1" selected>1×</option>
+      <option value="2">2×</option>
+      <option value="4">4×</option>
+    </select>
+    <div class="scrub">
+      <input id="scrubber" type="range" min="0" max="10000" value="10000" />
+      <div class="ticks" id="ticks"></div>
+    </div>
+    <div class="readout">
+      <div id="year" class="mono">2026</div>
+      <div id="count" class="mono">2,046 bursts</div>
+    </div>
+  </footer>
+  <div id="credits">Unofficial tribute; not affiliated with or endorsed by NASA. Data (planned): NASA GSFC Swift GRB Table · CelesTrak · Aerospace CORDS · Michigan SWORD. Placeholder Earth textures from three.js examples.<br>Music: “Travelers” by Andrew Prahlow, from <a href="https://annapurnainteractive.com/games/outer-wilds" target="_blank" rel="noopener"><em>Outer Wilds</em></a> (Mobius Digital / Annapurna Interactive).</div>
+
+  <div id="tooltip" class="hidden"></div>
+  <div id="swiftLabel">SWIFT</div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

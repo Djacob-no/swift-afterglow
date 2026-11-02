@@ -1,0 +1,190 @@
+I'm on it. I'll check the dataset and see whether anyone has shipped a repo version yet, then write the plan with a name and drafts of the LinkedIn and X posts.
+
+The research and the plan are underway, and I'll send the file once it's written.
+
+
+PLAN
+.md
+
+17kB
+
+
+Someone beat us to the name: a 
+HackerRepos site went live at 07:08 this morning (Oslo time) with the same "HackerTube, but for repos" pitch. They haven't posted a Show HN yet, so they could launch at any time. The plan uses the name HN Galaxy instead (hngalaxy.dev). The backups are HN Stars, HackerStars and Repos of HN. None of those domains seems to be in use, but check with a registrar before you buy.
+
+The plan ranks repos by how many different HN commenters recommended them, using the open Hacker News dataset on Hugging Face plus GitHub's API. Your edge over the existing site is the Rising view and the 3D galaxy. Day 1 is the data and list views, and day 2 is the galaxy and polish. The file also has draft Show HN, X and LinkedIn posts for you to edit and post yourself.
+
+The plan suggests posting Show HN on Wednesday afternoon. With a competitor already live, I'd push to launch Tuesday if you can, and put the galaxy front and center so it doesn't look like a copy.
+
+lol ok, lets pivot to the  Swift Last Light idea. I really like 3d websites anyway. make the implementation plan here instead
+
+Good pivot, the window on that one is tight. I'm checking the latest reentry estimates and NASA's data now, then I'll write the plan.
+
+The plan is underway, with a name, the data sources, an hour-by-hour build schedule, and drafts of the X and LinkedIn posts. I'll send it as soon as it's ready.
+
+
+PLAN
+.md
+
+14kB
+
+
+The Swift plan is ready. I've named it Swift Afterglow, since afterglow is the fading light Swift spent its life chasing. The plan covers the 3D sky of bursts, a live orbit dot over a 3D Earth, a countdown and a memorial mode, plus drafts of the X, LinkedIn and Show HN posts. swiftafterglow.com and .app look unused, but check with a registrar before you buy.
+
+The timing is tighter than I said this morning:
+
+The earliest forecast window opens around 08:30 Oslo time on Tuesday.
+The University of Michigan forecast says Tuesday at 18:33, not 17:18 as I told you.
+Aerospace Corp still says Wednesday 10:30, give or take 26 hours.
+The US Space Force says on or around Friday Nov 6.
+That means shipping Tuesday evening could be too late. I'd aim to have a first version live tonight or early Tuesday.
+
+The data checks out. NASA's table has 2,046 bursts going back to Dec 2004, and Swift's latest orbit data from last night has it at about 210 km. Neither source can be loaded directly from a browser, so the plan builds the data ahead of time and refreshes the orbit every hour or two.
+
+I haven't checked a few things yet: the star-catalog licenses, NASA's brand guidelines, and three of the highlighted bursts.
+
+
+
+No file chosen
+Swift Afterglow — Implementation Plan
+Research brief for the coding agent. Researched 2026-11-02 ~09:30 Oslo (UTC+1). Domain facts and data locations only; implementation choices are yours.
+
+1. Goal & success criteria
+A static 3D site honouring NASA's Neil Gehrels Swift Observatory (NORAD 28485, COSPAR 2004-047A, launched 2004-11-20 17:16 UTC) as it reenters. Users get three things: (a) a celestial sphere where Swift's ~2,046 GRBs flash in chronological order, (b) a live dot showing Swift's decaying orbit around a 3D Earth with a reentry countdown, and (c) a memorial mode after reentry. Done when: it is live on Cloudflare Pages by Tue Nov 3 evening (Oslo), loads in under 3 s on 4G, runs at 60 fps on a mid-range phone, every number shown traces to a cited source, and the memorial switch works without a redeploy.
+
+2. Name
+"Last Light" is already in use: https://tohuvavohu.com/swift-last-light/ ("Swift · Last Light — Catch the last light", a pass-finder with reentry forecasts). Don't use it.
+Recommended: "Swift Afterglow". In GRB science an afterglow is the fading X-ray and optical glow that Swift's XRT and UVOT chased, so the name fits the mission and the memorial theme. Loose checks: swiftafterglow.com and .app didn't resolve, which suggests they're unregistered (not verified with a registrar). afterglow.watch resolves to an unrelated site. A GitHub repo search for "swift afterglow grb" found no clash.
+Alternates: "2,046 Flashes" (the count) or "Swift: Last Burst".
+Credit the "Last Light" page and link to it as a companion tool.
+3. Domain context (verified live)
+Status
+
+NASA, 2026-10-23: Swift reached 275 km on Oct 20, entered safe mode, and Penn State ended operations. The servicing mission "ended in August without an attempt to boost." https://science.nasa.gov/blogs/swift/2026/10/23/nasas-swift-mission-ends-ahead-of-re-entry/
+Rescue: Katalyst Space's LINK (launched on Pegasus XL) did not capture or boost Swift. SatNews (2026-11-01) says attitude-control anomalies stopped proximity ops within about 15 km. https://satnews.com/2026/11/01/nasas-swift-observatory-expected-to-burn-up-in-atmospheric-reentry-following-failed-commercial-rescue/
+Mass is about 1,500 kg. Most of it burns up, but tungsten and some mirror parts may survive, most likely landing in ocean (Brad Cenko via AP). https://apnews.com/article/swift-observatory-nasa-telescope-e890935df7f468048594286566a96357
+The ground track stays within about ±21° latitude (inclination 20.55°), so Norway never sees it. Space.com, 2026-11-01: https://www.space.com/space-exploration/missions/nasas-swift-space-telescope-is-about-to-crash-to-earth-where-will-it-fall
+Reentry predictions: they disagree, so show all of them, sourced
+
+Source	Center (UTC)	Oslo	Window	Note
+Aerospace CORDS https://aerospace.org/reentries/28485	04 Nov 09:30	Wed 10:30	±26 h	orbit epoch 30 Oct 00:37 UTC, which is stale
+Michigan SWORD (via Last Light page, issued 01 Nov)	03 Nov 17:33	Tue 18:33	03 Nov 09:31–04 Nov 01:31 (90%)	ensemble, 80 km
+US Space Force (AP / SatNews)	"on or around Fri Nov 6"	—	—	conflicts with the others
+KeepTrack https://keeptrack.space/reentry-watch/reentry-28485	not fetched			
+Brief correction: the Last Light page shows 17:33 UTC = 18:33 Oslo, not 17:18. The earliest plausible reentry is Tue Nov 3 ~08:30–10:30 Oslo, which is before the planned ship time. Plan to ship an MVP Tue morning, or build memorial-ready from the start (see §8).
+
+4. Data pipeline (prebuild everything; neither source sends CORS headers)
+GRBs
+
+Index: https://swift.gsfc.nasa.gov/archive/grb_table/
+The "fullview/" page generates a TSV at /archive/grb_table/tmp/grb_table_<id>.txt. The tmp URL is ephemeral, so scrape the link from fullview/ at build time.
+Commit a snapshot as well, as a fallback.
+No Access-Control-Allow-Origin header, so client-side fetching won't work.
+TSV contents (2026-11-02 snapshot)
+
+35 tab-separated columns, 2,046 rows, from 041217 to 261017A.
+Columns:
+GRB, Time[UT], Trigger#
+BAT RA/Dec (J2000, decimal degrees), BAT error (arcmin), T90 (s), fluence 15–150 keV (1e-7 erg/cm²), 1-s peak flux, photon index ("1.09, PL"/"CPL")
+XRT RA/Dec (sexagesimal strings), error (arcsec), fluxes, NH
+UVOT RA/Dec (sexagesimal), magnitudes
+Other observatories, Redshift, Host, Comments, References (GCN numbers), Burst Advocate
+Dates come only from the name: YYMMDD plus a letter.
+Missing values
+
+Missing values appear as n/a or empty.
+BAT RA is missing on 18 rows. T90 is n/a or empty on about 408 rows.
+Redshift is present on only 467 rows, as free text with several values, e.g. 8.0 (MPI/ESO: photometric)|~8.1 (TNG) and 6 < z < 8 …. Parse the first numeric value, keep the raw text, and flag photometric vs spectroscopic.
+Positions
+
+Use the best available position: UVOT > XRT > BAT.
+Keep the error radius so the visual can show it.
+Curated highlights (all values below verified in the table)
+
+221009A "BOAT": 2022-10-09 14:10:17 UT, T90 1068.4 s, fluence 740, z 0.151.
+090423: z ≈ 8.0–8.1 photometric. The table only gives the photometric value. Cite literature (Tanvir+ 2009, z≈8.2) separately.
+050904: z 6.29.
+130427A: z 0.34.
+Also consider: 080319B "naked-eye burst"; 170817A (GW counterpart — Swift follow-up, not a BAT trigger, so check); 060614. These are not yet verified against the table.
+TLE
+
+URL: https://celestrak.org/NORAD/elements/gp.php?CATNR=28485&FORMAT=TLE (or FORMAT=JSON for OMM).
+No CORS header was returned.
+The latest epoch was 26305.93, i.e. 2026-11-01 ~22:16 UTC. Mean motion was 16.204 rev/day (≈210 km); Last Light reports altitude 212 km.
+CelesTrak refreshes roughly every few hours. Don't poll more than about once every 2 h, or it may block you.
+Use a Cloudflare Worker cron (every 1–2 h) to fetch the TLE into KV/R2 and serve /tle.json with CORS. Alternatively, trigger a scheduled rebuild with a GitHub Action.
+SGP4 accuracy
+
+At about 200 km with ndot ≈ 0.019, along-track error grows by tens of km to hundreds of km within hours.
+Show the TLE epoch and its age, and draw the dot as an uncertainty arc that grows with time since epoch.
+Stop propagating if the propagated altitude falls below about 120 km, or if the TLE age is over 12 h near the window.
+Never claim a location for the reentry.
+Predictions
+
+Aerospace returned HTTP 403 to automated fetches (per Last Light). Keep predictions in a hand-edited predictions.json, with source, issued, epoch, and window per entry.
+5. Data model (high level)
+grbs.json (~150–250 KB gzipped; aim for compact arrays): id, ISO time, ra, dec, posSource and error, t90, fluence, peakFlux, z (number|null) plus zRaw, xrtDetected, uvotDetected, otherObs, gcnRefs, advocate.
+highlights.json: id, title, one-line blurb, source URL.
+predictions.json: as described in §4.
+/tle.json (live): line1, line2, epoch, fetchedAt.
+status.json: mode ("live" | "memorial"), reentryTime (null | ISO), source URL.
+6. Product / UX
+Intro: start black, then show one flash, then "Swift saw 2,046 of these." Then pull back to Earth and the sphere.
+Live mode: Earth with Swift's dot, its trail, and the uncertainty arc. Show a countdown to the earliest plausible window edge and to each source's center time, a prediction-band chart, and the TLE age.
+Memorial mode: the dot is removed. Show "2004-11-20 → <reentry date>" and a full timeline replay. Add a link to NASA's statement.
+Timeline: a scrubber from 2004-12-17 to 2026-10, with play/pause and speed control. Each burst flashes at its position; flash size follows log fluence and decay follows T90. Show a year label and a running count.
+Burst detail (on click or tap): name, date, coordinates, T90, fluence, z, which instruments detected it, and links to GCN circulars (https://gcn.nasa.gov/circulars/<n>). Also offer filters: long vs short (T90 < 2 s), and "has redshift".
+Mobile: tap targets, a bottom sheet for details, and a reduced point budget/DPR.
+Share: a static OG image of the sky plus Earth, and a URL hash for each burst (#grb=221009A).
+Audio (optional, off by default): a soft tone per burst, with pitch from z.
+7. 3D / visual guidance (domain conventions)
+Convert RA/Dec (J2000, ICRS ≈ J2000 for this purpose) to unit vectors: x=cosδcosα, y=cosδsinα, z=sinδ, in an equatorial frame with +z toward the celestial north pole. Map this to three.js's y-up convention consistently.
+Earth's rotation: the Greenwich meridian angle in the equatorial frame is GMST (satellite.js gstime). Keep the sky static and rotate Earth by GMST.
+satellite.js eciToGeodetic returns TEME coordinates. TEME vs J2000 is negligible for this visual.
+Sun direction (for the day/night terminator and sunlit status) is a simple low-precision formula.
+Star background, optional:
+HYG v4 (astronexus, CC BY-SA 4.0 — attribution and share-alike apply to the derived data).
+Yale BSC5 (public domain-ish, ~9k stars; check the current HEASARC/CDS terms).
+Use only magnitude < 6.5 for size.
+Earth textures: NASA Blue Marble / Black Marble from NASA Visible Earth. These are NASA imagery, generally not copyrighted; credit "NASA Earth Observatory".
+Overlay faint galactic and ecliptic lines for context. GRBs are isotropic, which is itself worth a caption.
+8. Milestones (1-day build; start Mon evening or Tue early). Memorial switch built in from M1
+Block	Deliverable	Definition of done
+H0–1	Repo, Pages deploy, prebuild script → grbs.json, highlights, predictions	JSON validated: 2,046 rows, null counts logged
+H1–3	Sky sphere and GRB points with chronological playback	60 fps, scrubber works
+H3–5	Earth, GMST rotation, satellite.js dot, Worker cron for TLE	dot matches the Last Light/KeepTrack position within ~100s of km; TLE age shown
+H5–6	Countdown and prediction bands, burst detail panel	all times shown in UTC plus the user's local time, each with a source link
+H6–7	Memorial mode, intro, mobile pass	toggled by status.json
+H7–8	OG image, credits, Lighthouse, launch	public URL, all links checked
+Memorial trigger: flip status.json by hand when an authoritative source confirms reentry. Authoritative sources are the Space-Track decay message, a NASA statement, or Aerospace CORDS "reentered". As an automatic fallback, switch when the CelesTrak GP record disappears or its age exceeds 24 h after the window closes, and show "reentry presumed — awaiting confirmation".
+
+9. Guardrails & credits
+NASA brand: do not use the NASA "meatball" or worm logos or the Swift mission logo in a way that implies endorsement. NASA imagery is generally usable with credit. Add the footer: "Unofficial tribute; not affiliated with or endorsed by NASA." Guidelines: https://www.nasa.gov/nasa-brand-center/images-and-media/
+Credits to include: Swift GRB Table (NASA GSFC / Swift Science Center), CelesTrak, Aerospace Corp CORDS, Michigan SWORD, KeepTrack, the Last Light page, NASA Visible Earth, and the star catalog (with its license).
+Do not invent debris locations or casualty risk. NASA has not published a risk assessment (Space.com).
+10. Launch plan (anchored to the windows; earliest Tue 08:30 Oslo, Michigan center Tue 18:33, Aerospace Wed 10:30, USSF around Fri)
+T-day Tue ~12:00 Oslo (US morning is ~06:00 ET; better to wait for 15:00 Oslo = 09:00 ET): post the Show HN and the X thread. Post to r/dataisbeautiful as [OC], plus r/space and r/astronomy, each following that sub's self-promo rules.
+Repost an update with the next prediction or TLE refresh. When reentry is confirmed, post the memorial-mode reply in the X thread and add an HN comment.
+On X, tag accounts like @NASASwift and @NASAUniverse. Do not reply-spam.
+X thread draft
+
+NASA's Swift observatory is falling home after 22 years. Before it goes, I built a 3D sky of every gamma-ray burst it caught — 2,046 of them, replayed in order. 🌌 <link>
+Each flash is a dying star or merging neutron stars, billions of light-years away. Size = energy; decay = burst duration. Tap any one for the details and the GCN circulars.
+The white dot is Swift right now, ~210 km up, from live TLEs. Forecasts disagree by days (Aerospace, Michigan, Space Force) — so I show all of them with their uncertainty.
+When it reenters, the page becomes a memorial. Data: NASA Swift GRB table, CelesTrak. Unofficial tribute. Built with three.js + satellite.js.
+LinkedIn (Daniel's voice)
+
+NASA's Swift telescope reenters this week after 22 years — ten times its design life. I spent a day building Swift Afterglow: a 3D sky that replays all 2,046 gamma-ray bursts it detected, plus a live view of its final orbits. Static site, three.js, satellite.js, prebuilt NASA data, Cloudflare Pages. When it reenters, it flips to a memorial. <link>
+
+Show HN
+
+Title: Show HN: Swift Afterglow – every gamma-ray burst NASA's Swift saw, before it reenters
+First comment: why I built it (Swift ended ops Oct 20; the rescue failed). Data sources and processing: the GRB table TSV is prebuilt because it has no CORS; TLEs come via a Worker cron. Caveats: SGP4 is poor near reentry, so I show uncertainty and not a location. Explain the coordinate details. Credit the Last Light pass-finder. Ask for feedback.
+11. Risks / open questions
+Reentry may happen before launch (window opens around Tue 08:30 Oslo). Make memorial mode first-class.
+The predictions conflict: USSF says around Nov 6, the others say Nov 3–4. Refresh predictions.json on Tue morning.
+The GRB TSV tmp URL may change. Keep the committed snapshot.
+CelesTrak rate limits. Space-Track needs a login and its terms forbid redistribution, so avoid it.
+The redshift free-text parsing is messy, and 170817A/080319B are not verified.
+12. Sources (accessed 2026-11-02)
+NASA blog 2026-10-23 (above) · AP · SatNews 2026-11-01 · Space.com 2026-11-01 · https://aerospace.org/reentries/28485 · https://tohuvavohu.com/swift-last-light/ · https://keeptrack.space/reentry-watch/reentry-28485 · https://swift.gsfc.nasa.gov/archive/grb_table/ · https://celestrak.org/NORAD/elements/gp.php?CATNR=28485&FORMAT=TLE · FlyMarshall (USSF Nov 6) https://fly-marshall.com/article/nasa-swift-observatory-reentry-nov6-swft06
