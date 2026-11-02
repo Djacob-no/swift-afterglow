@@ -6,7 +6,16 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { DEG, EQ_TO_THREE, radecToEq, eqToThree, gmst, sunDirEq, galacticPlane, eclipticPlane } from './astro.js';
 import { SONG_LEN, BOAT_FLASH_AT, PULLBACK, REPLAY, END_CARD_AT, SEQUENCE_END, energyAt, buildCues } from './cinematic.js';
-import { GRBS, HIGHLIGHTS, PREDICTIONS, TLE, STATUS, MISSION, TIMELINE_START, SPAN_DAYS, DAY, TOTAL } from './mockData.js';
+import { twoline2satrec, propagate, eciToGeodetic, degreesLat, degreesLong, gstime } from './sgp4.js';
+import { loadData } from './data.js';
+
+const { GRBS, HIGHLIGHTS, PREDICTIONS, TLE, STATUS, STARS, TIMELINE_START, SPAN_DAYS, TOTAL, DAY } = await loadData();
+const MISSION = {
+  launch: '2004-11-20T17:16:00Z',
+  nasaStatement: 'https://science.nasa.gov/blogs/swift/2026/10/23/nasas-swift-mission-ends-ahead-of-re-entry/',
+};
+// every place the page states the burst count reads it from the data
+document.querySelectorAll('[data-total]').forEach((el) => (el.textContent = TOTAL.toLocaleString('en-US')));
 
 const SKY_R = 50;
 const EARTH_KM = 6371;
@@ -35,31 +44,21 @@ const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.
 if (new URLSearchParams(location.search).get('bloom') !== '0') composer.addPass(bloom);
 composer.addPass(new OutputPass());
 
-// ---------- background stars (mock, galactic-plane biased) ----------
+// ---------- background stars: Yale Bright Star Catalogue (V ≤ 6.5) ----------
 {
-  const n = 4000, pos = new Float32Array(n * 3), size = new Float32Array(n);
-  const gal = galacticPlane();
+  const n = STARS.length, pos = new Float32Array(n * 3), size = new Float32Array(n);
   const v = new THREE.Vector3();
-  for (let i = 0; i < n; i++) {
-    let p;
-    if (Math.random() < 0.45) {
-      const g = gal[Math.floor(Math.random() * gal.length)];
-      p = new THREE.Vector3(g[0], g[1], g[2]).add(new THREE.Vector3().randomDirection().multiplyScalar(Math.random() * 0.18)).normalize();
-      p = [p.x, p.y, p.z];
-    } else {
-      const r = v.randomDirection();
-      p = [r.x, r.y, r.z];
-    }
-    eqToThree(p, SKY_R * 1.2, v).toArray(pos, i * 3);
-    size[i] = Math.pow(Math.random(), 6) * 2.4 + 0.6;
-  }
+  STARS.forEach(([ra, dec, vmag], i) => {
+    eqToThree(radecToEq(ra, dec), SKY_R * 1.2, v).toArray(pos, i * 3);
+    size[i] = THREE.MathUtils.clamp(3.4 - 0.5 * vmag, 0.7, 4.2); // brighter star → bigger point
+  });
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   geo.setAttribute('aSize', new THREE.BufferAttribute(size, 1));
   const mat = new THREE.ShaderMaterial({
     uniforms: { uDpr: { value: DPR } },
     vertexShader: `attribute float aSize; uniform float uDpr; varying float vA;
-      void main(){ vA = 0.25 + aSize*0.18; gl_PointSize = aSize*uDpr; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.); }`,
+      void main(){ vA = 0.18 + aSize*0.16; gl_PointSize = aSize*uDpr; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.); }`,
     fragmentShader: `varying float vA; void main(){ float d=length(gl_PointCoord-.5)*2.; if(d>1.) discard;
       gl_FragColor = vec4(vec3(.75,.8,.95), (1.-d)*vA); }`,
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
@@ -82,7 +81,9 @@ circleLine(galacticPlane(), 0xb48cff, 0.35);
 circleLine(eclipticPlane(), 0xffd36b, 0.25);
 
 // ---------- GRB sky ----------
-const grbPos = GRBS.map((g) => eqToThree(radecToEq(g.ra, g.dec), SKY_R));
+// one burst (140809A) has no position in the table: it counts, but never appears in the sky
+const hasPos = (g) => g.ra != null && g.dec != null;
+const grbPos = GRBS.map((g) => (hasPos(g) ? eqToThree(radecToEq(g.ra, g.dec), SKY_R) : new THREE.Vector3()));
 const grbUniforms = {
   uNow: { value: SPAN_DAYS }, uDaysPerSec: { value: BASE_DAYS_PER_SEC }, uDpr: { value: DPR },
   uFilter: { value: 0 }, uZOnly: { value: 0 }, uSolo: { value: -1 }, uSelected: { value: -1 }, uHover: { value: -1 }, uEnergy: { value: 0 },
@@ -94,8 +95,8 @@ const grbUniforms = {
     aTau = new Float32Array(n), aMask = new Float32Array(n), aId = new Float32Array(n);
   GRBS.forEach((g, i) => {
     grbPos[i].toArray(pos, i * 3);
-    aT[i] = (g.t - TIMELINE_START) / DAY;
-    aSize[i] = THREE.MathUtils.clamp(3.0 + 2.4 * Math.log10(g.fluence / 0.08), 2.5, 13);
+    aT[i] = hasPos(g) ? (g.t - TIMELINE_START) / DAY : 1e7;
+    aSize[i] = THREE.MathUtils.clamp(3.0 + 2.4 * Math.log10((g.fluence ?? 1) / 0.08), 2.5, 15);
     const t90 = g.t90 ?? 20;
     aTau[i] = 0.2 + 0.32 * Math.log10(1 + t90);
     aMask[i] = (g.t90 != null && g.t90 < 2 ? 1 : 0) + (g.z != null ? 2 : 0) + (g.t90 == null ? 4 : 0);
@@ -158,8 +159,9 @@ scene.add(earth);
 const sunUniform = { value: new THREE.Vector3(1, 0, 0) };
 {
   const loader = new THREE.TextureLoader();
-  const day = loader.load('/textures/earth_atmos_2048.jpg');
-  const night = loader.load('/textures/earth_lights_2048.png');
+  const res = innerWidth * DPR > 1800 ? '4k' : '2k';
+  const day = loader.load(`/textures/blue-marble-dec-${res}.jpg`); // NASA Blue Marble NG, December
+  const night = loader.load(`/textures/black-marble-2016-${res}.jpg`); // NASA Black Marble 2016
   day.colorSpace = night.colorSpace = THREE.SRGBColorSpace;
   day.anisotropy = night.anisotropy = 8;
   const mat = new THREE.ShaderMaterial({
@@ -194,14 +196,34 @@ const sunUniform = { value: new THREE.Vector3(1, 0, 0) };
   scene.add(atm);
 }
 
-// ---------- Swift orbit (circular mock of the TLE) ----------
-const orbitR = 1 + TLE.altitudeKm / EARTH_KM;
+// ---------- Swift orbit: SGP4 from the latest TLE ----------
+// Geometry lives in a local frame: x = towards Swift, y = along-track, z = orbit normal, unit radius.
+// Each frame the plane's matrix is rebuilt from the propagated position/velocity and scaled to |r|.
+const satrec = twoline2satrec(TLE.line1, TLE.line2);
+const tleEpoch = Date.parse(TLE.epoch);
+const MIN_ALT_KM = 120; // below this SGP4 is meaningless: stop drawing
+function swiftState(date) {
+  const pv = propagate(satrec, date);
+  if (!pv || !pv.position || !pv.velocity || Number.isNaN(pv.position.x)) return null;
+  const geo = eciToGeodetic(pv.position, gstime(date));
+  return { r: pv.position, v: pv.velocity, altKm: geo.height, lat: degreesLat(geo.latitude), lon: degreesLong(geo.longitude) };
+}
 const orbitPlane = new THREE.Group();
 orbitPlane.matrixAutoUpdate = false;
-orbitPlane.matrix.copy(EQ_TO_THREE).multiply(new THREE.Matrix4().makeRotationZ(TLE.raan * DEG)).multiply(new THREE.Matrix4().makeRotationX(TLE.inclination * DEG));
 const spin = new THREE.Group();
 orbitPlane.add(spin);
 scene.add(orbitPlane);
+const _bx = new THREE.Vector3(), _by = new THREE.Vector3(), _bz = new THREE.Vector3(), _basis = new THREE.Matrix4();
+function placeOrbit(st) {
+  _bx.set(st.r.x, st.r.y, st.r.z);
+  const rKm = _bx.length();
+  _bx.normalize();
+  _bz.crossVectors(_bx, _by.set(st.v.x, st.v.y, st.v.z)).normalize();
+  _by.crossVectors(_bz, _bx);
+  _basis.makeBasis(_bx, _by, _bz).scale(_by.set(1, 1, 1).multiplyScalar(rKm / EARTH_KM));
+  orbitPlane.matrix.copy(EQ_TO_THREE).multiply(_basis);
+  orbitPlane.matrixWorldNeedsUpdate = true;
+}
 
 function glowTexture() {
   const c = document.createElement('canvas'); c.width = c.height = 128;
@@ -216,13 +238,13 @@ function glowTexture() {
 }
 const swiftDot = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(), blending: THREE.AdditiveBlending, depthWrite: false, color: 0xffffff }));
 swiftDot.scale.setScalar(0.07);
-swiftDot.position.set(orbitR, 0, 0);
+swiftDot.position.set(1, 0, 0);
 spin.add(swiftDot);
 
 // full orbit path, faint
 {
   const pts = [];
-  for (let i = 0; i <= 256; i++) { const a = (i / 256) * Math.PI * 2; pts.push(new THREE.Vector3(Math.cos(a) * orbitR, Math.sin(a) * orbitR, 0)); }
+  for (let i = 0; i <= 256; i++) { const a = (i / 256) * Math.PI * 2; pts.push(new THREE.Vector3(Math.cos(a), Math.sin(a), 0)); }
   orbitPlane.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),
     new THREE.LineBasicMaterial({ color: 0x7ff0d8, transparent: true, opacity: 0.12, depthWrite: false })));
 }
@@ -231,7 +253,7 @@ spin.add(swiftDot);
   const n = 160, pts = [], cols = [];
   for (let i = 0; i <= n; i++) {
     const f = i / n, a = -f * Math.PI;
-    pts.push(Math.cos(a) * orbitR, Math.sin(a) * orbitR, 0);
+    pts.push(Math.cos(a), Math.sin(a), 0);
     const k = Math.pow(1 - f, 2);
     cols.push(0.5 * k, 0.95 * k, 0.85 * k);
   }
@@ -249,7 +271,7 @@ function updateArc(halfRad) {
   if (Math.abs(halfRad - lastArc) < 0.002) return;
   lastArc = halfRad;
   const pts = [];
-  for (let i = 0; i <= 48; i++) { const a = -halfRad + (2 * halfRad * i) / 48; pts.push(new THREE.Vector3(Math.cos(a) * orbitR, Math.sin(a) * orbitR, 0)); }
+  for (let i = 0; i <= 48; i++) { const a = -halfRad + (2 * halfRad * i) / 48; pts.push(new THREE.Vector3(Math.cos(a), Math.sin(a), 0)); }
   arcMesh.geometry.dispose();
   arcMesh.geometry = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 64, 0.007, 8, false);
 }
@@ -263,7 +285,6 @@ const state = {
   warp: 1, orbitTime: Date.now(),
   view: 'start',
 };
-const tleEpoch = Date.parse(TLE.epoch);
 const swiftWorld = new THREE.Vector3();
 
 // ---------- HUD: highlights ----------
@@ -328,7 +349,6 @@ function applyMode() {
   const mem = state.mode === 'memorial';
   $('live').classList.toggle('hidden', mem);
   $('memorial').classList.toggle('hidden', !mem);
-  orbitPlane.visible = !mem;
   $('swiftLabel').style.display = mem ? 'none' : '';
   $('modeToggle').textContent = mem ? 'Back to live mode' : 'Preview memorial mode';
   $('memEnd').textContent = (STATUS.reentryTime ?? '2026-11-03').slice(0, 10);
@@ -348,10 +368,18 @@ const bandPct = (t) => ((t - bandStart) / (bandEnd - bandStart)) * 100;
   const el = $('bands');
   let html = '';
   for (const p of PREDICTIONS) {
-    const s = bandPct(Date.parse(p.start)), e = bandPct(Date.parse(p.end)), c = bandPct(Date.parse(p.center));
-    html += `<div class="band-row"><span class="lbl">${p.source.split(' ')[0]}</span><div class="band-track">
-      <div class="band ${p.fuzzy ? 'fuzzy' : ''}" style="left:${s}%;width:${e - s}%" title="${p.source}: ${p.note}">
-      <div class="ctr" style="left:${((c - s) / (e - s)) * 100}%"></div></div></div></div>`;
+    const c = bandPct(Date.parse(p.center));
+    const label = `<span class="lbl">${p.source.replace(/ (CORDS|SWORD|TIP)$/, '')}</span>`;
+    if (p.start && p.end) {
+      const s = bandPct(Date.parse(p.start)), e = bandPct(Date.parse(p.end));
+      html += `<div class="band-row">${label}<div class="band-track">
+        <div class="band ${p.fuzzy ? 'fuzzy' : ''}" style="left:${s}%;width:${e - s}%" title="${p.source}: ${p.note}">
+        <div class="ctr" style="left:${((c - s) / (e - s)) * 100}%"></div></div></div></div>`;
+    } else {
+      // no usable window (e.g. TIP still weeks wide): nominal time only
+      html += `<div class="band-row">${label}<div class="band-track">
+        <div class="ctr solo" style="left:${c}%" title="${p.source}: ${p.note}"></div></div></div>`;
+    }
   }
   html += '<div class="axis">';
   for (let d = 2; d <= 7; d++) html += `<span style="left:${bandPct(Date.UTC(2026, 10, d))}%">Nov ${d}</span>`;
@@ -370,9 +398,10 @@ function updateLiveHud(nowMs) {
   const ageMs = nowMs - tleEpoch;
   const ageH = ageMs / 3600000;
   $('tleAge').textContent = `${ageH.toFixed(1)} h`;
+  $('alt').textContent = swift ? `${Math.round(swift.altKm)} km` : 'unavailable';
   const halfKm = Math.min(25 + 45 * ageH, 3000);
   $('unc').textContent = `${Math.round(halfKm).toLocaleString()} km`;
-  const earliest = Math.min(...PREDICTIONS.map((p) => Date.parse(p.start)));
+  const earliest = earliestWindow;
   const real = Date.now();
   $('cdMain').textContent = real < earliest ? fmtDur(earliest - real) : 'window open';
   $('cdList').innerHTML = PREDICTIONS.map((p) => {
@@ -386,6 +415,8 @@ function updateLiveHud(nowMs) {
 
 // ---------- burst detail ----------
 const detail = $('detail');
+// BAT errors are given in arcmin, XRT/UVOT in arcsec; the build stores everything in arcsec
+const fmtErr = (g) => (g.errArcsec == null ? '?' : g.posSrc === 'BAT' ? `${(g.errArcsec / 60).toFixed(1)}′` : `${g.errArcsec}″`);
 function showDetail(i) {
   state.selected = i;
   grbUniforms.uSelected.value = i;
@@ -395,17 +426,23 @@ function showDetail(i) {
   const fmt = (v, u = '') => (v == null ? '<span style="color:#555">n/a</span>' : v + u);
   detail.innerHTML = `<button class="close" aria-label="Close">×</button>
     <h2>GRB ${g.id}</h2>
-    <div class="sub">${g.iso.replace('T', ' ').replace('Z', ' UTC')}</div>
-    ${hl ? `<div class="hl">★ ${hl.title} — ${hl.blurb}</div>` : ''}
+    <div class="sub">${g.timeKnown ? g.iso.replace('T', ' ').replace('Z', ' UTC') : g.iso.slice(0, 10) + ' (time not listed)'}</div>
+    ${hl ? `<div class="hl">★ ${hl.title}: ${hl.blurb}${hl.note ? `<br><span class="hl-note">${hl.note}</span>` : ''} <a href="${hl.url}" target="_blank" rel="noopener">source ↗</a></div>` : ''}
     <dl>
-      <dt>RA / Dec</dt><dd>${g.ra.toFixed(3)}°, ${g.dec >= 0 ? '+' : ''}${g.dec.toFixed(3)}°</dd>
-      <dt>Position</dt><dd>${g.posSrc} ± ${g.err}</dd>
-      <dt>T90</dt><dd>${fmt(g.t90, ' s')} ${g.t90 != null ? (g.t90 < 2 ? '· short' : '· long') : ''}</dd>
-      <dt>Fluence</dt><dd>${fmt(g.fluence)} <small>×10⁻⁷ erg/cm²</small></dd>
+      <dt>RA / Dec</dt><dd>${hasPos(g) ? `${g.ra.toFixed(3)}°, ${g.dec >= 0 ? '+' : ''}${g.dec.toFixed(3)}°` : fmt(null)}</dd>
+      <dt>Position</dt><dd>${g.posSrc ? `${g.posSrc} ± ${fmtErr(g)}` : fmt(null)}</dd>
+      <dt>T90</dt><dd>${g.t90 == null ? fmt(null) : `${g.t90Q ?? ''}${g.t90} s · ${g.t90 < 2 && g.t90Q !== '>' ? 'short' : 'long'}`}</dd>
+      <dt>Fluence</dt><dd>${g.fluence == null ? fmt(null) : `${g.fluenceQ ?? ''}${g.fluence}`} <small>×10⁻⁷ erg/cm² (BAT)</small></dd>
       <dt>Peak flux</dt><dd>${fmt(g.peakFlux)} <small>ph/cm²/s</small></dd>
-      <dt>Redshift</dt><dd>${g.z == null ? fmt(null) : `z = ${g.z}${/phot/i.test(g.zRaw) ? ' <small>(photometric)</small>' : ''}`}</dd>
-      <dt>Seen by</dt><dd><span class="inst y">BAT</span><span class="inst ${g.xrt ? 'y' : ''}">XRT</span><span class="inst ${g.uvot ? 'y' : ''}">UVOT</span></dd>
-      <dt>GCN</dt><dd>${g.gcn.map((n) => `<a href="https://gcn.nasa.gov/circulars/${n}" target="_blank" rel="noopener">${n}</a>`).join(' ')}</dd>
+      <dt>Redshift</dt><dd>${g.z == null ? fmt(null) : `z = ${g.z}${g.zType === 'phot' ? ' <small>(photometric)</small>' : ''}`}</dd>
+      ${g.xrtDelay != null && g.xrtDelay < 3600 ? `<dt>X-ray look</dt><dd>${Math.round(g.xrtDelay)} s after trigger</dd>` : ''}
+      <dt>Instruments</dt><dd>${['BAT', 'XRT', 'UVOT'].map((k) => {
+        const st = k === 'BAT' ? 'det' : g[k.toLowerCase()];
+        const tip = st === 'det' ? 'detected' : st === 'obs' ? 'looked, nothing detected (upper limit)' : 'no data';
+        return `<span class="inst ${st === 'det' ? 'y' : st === 'obs' ? 'o' : ''}" title="${k}: ${tip}">${k}${st === 'obs' ? ' ○' : ''}</span>`;
+      }).join('')}</dd>
+      <dt>GCN</dt><dd>${g.gcn.length ? g.gcn.slice(0, 6).map((n) => `<a href="https://gcn.nasa.gov/circulars/${n}" target="_blank" rel="noopener">${n}</a>`).join(' ')
+        + (g.gcn.length > 6 ? ` <a href="https://gcn.nasa.gov/circulars/events/grb-${g.id.toLowerCase()}" target="_blank" rel="noopener">+${g.gcn.length - 6} more ↗</a>` : '') : fmt(null)}</dd>
     </dl>`;
   detail.querySelector('.close').onclick = () => showDetail(-1);
   detail.classList.remove('hidden');
@@ -433,6 +470,15 @@ function focusBurst(i, jumpTime) {
 let flashUntil = -1;
 
 // ---------- picking ----------
+// Never show a position we can't stand behind: below 120 km, or TLE too old once the window is open
+let swift = null;
+const earliestWindow = Math.min(...PREDICTIONS.map((p) => Date.parse(p.start ?? p.center)));
+function swiftUsable(st, nowMs) {
+  if (!st || st.altKm < MIN_ALT_KM) return null;
+  const ageH = (nowMs - tleEpoch) / 3600000;
+  if (ageH > 48 || (nowMs >= earliestWindow && ageH > 12)) return null;
+  return st;
+}
 const tip = $('tooltip');
 const tmp = new THREE.Vector3();
 function rayHitsEarth(from, to) {
@@ -447,6 +493,7 @@ const proj = new THREE.Vector3();
 function pick(cx, cy) {
   let best = -1, bestD = 14 * 14;
   for (let i = 0; i < GRBS.length; i++) {
+    if (!hasPos(GRBS[i])) continue;
     const aT = (GRBS[i].t - TIMELINE_START) / DAY;
     if (aT > state.now) continue;
     const g = GRBS[i];
@@ -490,8 +537,8 @@ const introLook = boatDir.clone().multiplyScalar(SKY_R);
 const ORIGIN = new THREE.Vector3();
 function swiftSideView(dist, aheadMs = 8000) {
   // a camera spot on Swift's side of Earth, so the live dot is in view
-  const u = TLE.argLat0 * DEG + 2 * Math.PI * TLE.meanMotion * ((state.orbitTime + aheadMs - tleEpoch) / DAY);
-  const p = new THREE.Vector3(Math.cos(u), Math.sin(u), 0).applyMatrix4(orbitPlane.matrix);
+  const st = swiftState(new Date(state.orbitTime + aheadMs));
+  const p = st ? eqToThree([st.r.x, st.r.y, st.r.z], 1).normalize() : new THREE.Vector3(1, 0, 0);
   return p.add(new THREE.Vector3(0, 0.45, 0)).normalize().multiplyScalar(dist);
 }
 let introTo = swiftSideView(6.5);
@@ -499,7 +546,7 @@ const currentLook = introLook.clone();
 const REPLAY_DPS = SPAN_DAYS / (REPLAY[1] - REPLAY[0]);
 const replayTimeOf = (days) => REPLAY[0] + (days / SPAN_DAYS) * (REPLAY[1] - REPLAY[0]);
 const burstAt = (id) => replayTimeOf((GRBS.find((g) => g.id === id).t - TIMELINE_START) / DAY);
-const cues = buildCues({ burstAt, memorial: state.mode === 'memorial', reentryDate: (STATUS.reentryTime ?? '').slice(0, 10) });
+const cues = buildCues({ total: TOTAL, burstAt, memorial: state.mode === 'memorial', reentryDate: (STATUS.reentryTime ?? '').slice(0, 10) });
 const cineAt = params.has('cineAt') ? +params.get('cineAt') : null; // debug: freeze the tribute at t seconds
 const cine = { t: 0, done: false, orbiting: false, userZoomed: false, cue: null };
 const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
@@ -600,7 +647,7 @@ function updateFlashLabel(T) {
   if (T - label.hiddenAt < LABEL_GAP) return;
   let pickIdx = cueVisible ? cueIdx : -1;
   for (let i = countAt(state.now) - 1; pickIdx < 0 && i >= 0 && grbDays[i] >= state.now - LABEL_LOOKBACK * REPLAY_DPS; i--) {
-    if (labelSpot(i)) pickIdx = i;
+    if (hasPos(GRBS[i]) && labelSpot(i)) pickIdx = i;
   }
   if (pickIdx < 0) return;
   const g = GRBS[pickIdx];
@@ -766,8 +813,9 @@ function frame() {
   const od = new Date(state.orbitTime);
   earth.rotation.y = gmst(od);
   eqToThree(sunDirEq(od), 1, sunUniform.value);
-  const u = TLE.argLat0 * DEG + 2 * Math.PI * TLE.meanMotion * ((state.orbitTime - tleEpoch) / DAY);
-  spin.rotation.z = u;
+  swift = swiftUsable(swiftState(od), state.orbitTime);
+  orbitPlane.visible = !!swift && state.mode !== 'memorial';
+  if (swift) placeOrbit(swift);
 
   if (state.view === 'tribute') runTribute(dt);
   else if (state.view === 'explore') {
@@ -804,19 +852,19 @@ function frame() {
   if (hudTimer <= 0 && state.mode === 'live') {
     hudTimer = 0.25;
     arcHalf = updateLiveHud(state.orbitTime);
-    updateArc(arcHalf / (EARTH_KM + TLE.altitudeKm));
+    updateArc(arcHalf / (EARTH_KM + (swift?.altKm ?? 200)));
   }
 
   // Swift label
   const lbl = $('swiftLabel');
-  if (state.mode === 'live' && state.view === 'explore') {
+  if (state.mode === 'live' && state.view === 'explore' && swift) {
     swiftDot.getWorldPosition(swiftWorld);
     proj.copy(swiftWorld).project(camera);
     const hidden = proj.z > 1 || rayHitsEarth(camera.position, swiftWorld);
     lbl.style.opacity = hidden ? 0 : 1;
     lbl.style.left = (proj.x * 0.5 + 0.5) * innerWidth + 'px';
     lbl.style.top = (-proj.y * 0.5 + 0.5) * innerHeight + 'px';
-    lbl.innerHTML = `SWIFT<small>≈${TLE.altitudeKm} km · ±${Math.round(arcHalf).toLocaleString()} km</small>`;
+    lbl.innerHTML = `SWIFT<small>${Math.round(swift?.altKm ?? 0)} km · ±${Math.round(arcHalf).toLocaleString()} km</small>`;
     swiftDot.scale.setScalar(0.09 + 0.015 * Math.sin(performance.now() / 300));
   } else lbl.style.opacity = 0;
 
@@ -832,4 +880,4 @@ addEventListener('resize', () => {
   composer.setSize(innerWidth, innerHeight);
 });
 
-if (import.meta.env.DEV) window.__sa = { camera, grbUniforms, grbPos, boatIdx, state, GRBS, music, cine, controls, label };
+if (import.meta.env.DEV) window.__sa = { camera, grbUniforms, grbPos, boatIdx, state, GRBS, music, cine, controls, label, swiftState, getSwift: () => swift, gmst, sunDirEq, eqToThree, radecToEq, earth };

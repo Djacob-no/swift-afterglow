@@ -107,6 +107,12 @@ for (const line of lines.slice(1)) {
   else if (bat.ra != null && bat.dec != null) pos = { ra: bat.ra, dec: bat.dec, src: 'BAT', errArcsec: bat.err != null ? bat.err * 60 : null };
 
   const t90 = num(c[6]), flu = num(c[7]), peak = num(c[9]), xdt = num(c[16]);
+  // instrument status: 'det' (measured), 'obs' (looked, upper limits only), null (no data)
+  const measured = (s) => !NA(s) && !/^\s*[<>]/.test(s) && !/[<>]/.test(s);
+  const xrtStatus = xrt.ra != null || [17, 18, 19, 20, 21, 22].some((i) => measured(c[i])) ? 'det'
+    : !NA(c[16]) || [17, 18, 19].some((i) => !NA(c[i])) ? 'obs' : null;
+  const uvotStatus = uvot.ra != null || measured(c[27]) ? 'det'
+    : !NA(c[26]) || !NA(c[27]) || !NA(c[28]) ? 'obs' : null;
   const { z, zType } = redshift(c[30]);
   const gcn = [...new Set([...c[33].matchAll(/GCN\s*(\d+)/g)].map((m) => +m[1]))];
 
@@ -117,7 +123,7 @@ for (const line of lines.slice(1)) {
     fluence: flu?.v ?? null, fluenceQ: flu?.q ?? null,
     peakFlux: peak?.v ?? null,
     z, zType, zRaw: NA(c[30]) ? null : c[30].trim(),
-    xrt: xrt.ra != null, uvot: uvot.ra != null,
+    xrt: xrtStatus, uvot: uvotStatus,
     xrtDelay: xdt?.v ?? null,
     otherObs: NA(c[29]) ? null : c[29].trim(),
     host: NA(c[31]) ? null : c[31].trim(),
@@ -140,13 +146,15 @@ if (bursts.length < 2000) problems.push(`only ${bursts.length} rows`);
 const nulls = (k) => bursts.filter((b) => b[k] == null).length;
 console.log(`rows: ${bursts.length}  (${bursts[0].id} → ${bursts.at(-1).id})`);
 console.log(`nulls: position ${nulls('ra')}, t90 ${nulls('t90')}, fluence ${nulls('fluence')}, peakFlux ${nulls('peakFlux')}, z ${nulls('z')}, time-of-day unknown ${bursts.filter((b) => !b.timeKnown).length}`);
+console.log(`XRT det/obs: ${bursts.filter((b) => b.xrt === 'det').length}/${bursts.filter((b) => b.xrt === 'obs').length}, UVOT det/obs: ${bursts.filter((b) => b.uvot === 'det').length}/${bursts.filter((b) => b.uvot === 'obs').length}`);
 console.log(`position source: UVOT ${bursts.filter((b) => b.posSrc === 'UVOT').length}, XRT ${bursts.filter((b) => b.posSrc === 'XRT').length}, BAT ${bursts.filter((b) => b.posSrc === 'BAT').length}`);
 const delays = bursts.map((b) => b.xrtDelay).filter((v) => v != null).sort((a, b) => a - b);
 console.log(`XRT time to first observation: median ${delays[delays.length >> 1]} s (n=${delays.length})`);
 
 // ---------- highlights (every value checked against the table) ----------
 const HIGHLIGHTS = [
-  { id: '221009A', title: 'The BOAT', blurb: '"Brightest Of All Time". The brightest gamma-ray burst ever recorded, estimated as a once-in-10,000-years event.', url: 'https://www.jpl.nasa.gov/news/brightest-cosmic-explosion-ever-detected-had-other-unique-features/' },
+  { id: '221009A', title: 'The BOAT', blurb: '"Brightest Of All Time". The brightest gamma-ray burst ever recorded, estimated as a once-in-10,000-years event.', url: 'https://www.jpl.nasa.gov/news/brightest-cosmic-explosion-ever-detected-had-other-unique-features/',
+    note: 'Swift\'s BAT triggered at 14:10 UT, about 53 minutes after Fermi saw the main blast (GCN 32632, 32636), so the fluence below covers only the later emission.' },
   { id: '090423', title: 'From the cosmic dawn', blurb: 'At redshift about 8, its light set out roughly 13 billion years ago, when the universe was about 630 million years old.', url: 'https://www3.nasa.gov/mission_pages/swift/bursts/cosmic_record.html' },
   { id: '050904', title: 'Distance record, 2005', blurb: 'At redshift 6.29, the most distant explosion known when Swift caught it.', url: 'https://arxiv.org/abs/astro-ph/0509766' },
   { id: '130427A', title: 'Nearby monster', blurb: 'One of the most energetic bursts ever seen, and unusually close, at redshift 0.34.', url: 'https://www.nasa.gov/universe/nasa-sees-watershed-cosmic-blast-in-unique-detail/' },
@@ -164,7 +172,7 @@ if (problems.length) {
 const FIELDS = ['id', 't', 'timeKnown', 'trigger', 'ra', 'dec', 'posSrc', 'errArcsec', 't90', 't90Q', 'fluence', 'fluenceQ', 'peakFlux',
   'z', 'zType', 'zRaw', 'xrt', 'uvot', 'xrtDelay', 'otherObs', 'host', 'gcn', 'advocate'];
 fs.mkdirSync(OUT, { recursive: true });
-const grbs = { source, builtAt: new Date().toISOString(), count: bursts.length, fields: FIELDS, rows: bursts.map((b) => FIELDS.map((f) => b[f])) };
+const grbs = { source, count: bursts.length, fields: FIELDS, rows: bursts.map((b) => FIELDS.map((f) => b[f])) };
 fs.writeFileSync(path.join(OUT, 'grbs.json'), JSON.stringify(grbs));
 fs.writeFileSync(path.join(OUT, 'highlights.json'), JSON.stringify(HIGHLIGHTS, null, 2) + '\n');
 const kb = (f) => (fs.statSync(path.join(OUT, f)).size / 1024).toFixed(0) + ' KB';

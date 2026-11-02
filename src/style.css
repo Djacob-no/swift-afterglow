@@ -86,7 +86,7 @@ label { display: block; font-size: 10px; letter-spacing: .1em; text-transform: u
 .mem-dates { font-size: 20px; margin: 8px 0; color: var(--ember); }
 #memorial p { color: var(--dim); }
 
-#detail { right: 22px; bottom: 108px; width: 320px; }
+#detail { right: 22px; bottom: 108px; width: 320px; max-height: calc(100vh - 140px); overflow-y: auto; }
 #detail .close { position: absolute; top: 8px; right: 10px; background: none; border: 0; color: var(--dim); font-size: 16px; }
 #detail h2 { margin: 0; font: 500 20px var(--mono); color: var(--hot); }
 #detail .sub { color: var(--dim); font-size: 11.5px; margin-bottom: 8px; }
@@ -264,3 +264,9 @@ body.v-tribute #endCard.on { opacity: 1 !important; }
   .np-link { gap: 9px; }
   .np-link img { width: 80px; height: 45px; }
 }
+
+/* prediction without a usable window: nominal time only */
+.band-track .ctr.solo { position: absolute; top: 2px; bottom: 2px; width: 2px; background: var(--ember); box-shadow: 0 0 6px var(--ember); }
+#detail .hl-note { color: var(--dim); font-size: 11px; }
+#detail .hl a { font-size: 11px; margin-left: 4px; }
+.inst.o { color: var(--dim); border-color: #ffffff22; border-style: dashed; }

@@ -29,9 +29,9 @@ const STEP = 7.5; // a new line every ~7.5 s: ~6.8 s on screen, ~1 s crossfade
  * `burstAt(id)` returns the song time at which that burst appears in the replay,
  * so burst-tied captions stay correct when real data replaces the mock.
  */
-export function buildCues({ burstAt, memorial, reentryDate }) {
+export function buildCues({ total, burstAt, memorial, reentryDate }) {
   const cues = [
-    { at: 2.5, text: 'Swift saw <b>2,046</b> of these.' },
+    { at: 2.5, text: `Swift saw <b>${total.toLocaleString('en-US')}</b> of these.` },
     { at: 9.5, text: 'Each one is a gamma-ray burst:<br>the death of a star.' },
     { at: 17, text: 'For a few seconds, it outshines<br>an entire galaxy.' },
     { at: 24.5, text: 'In those seconds it releases more energy<br>than our Sun will in its whole 10-billion-year life.' },
@@ -41,7 +41,7 @@ export function buildCues({ burstAt, memorial, reentryDate }) {
     { at: 54, text: 'More stars than grains of sand<br>on every beach on Earth.' },
     { at: 61.5, text: 'Somewhere out there, a burst like these<br>goes off about once a day.' },
     { at: 69, text: 'After the flash, a fading glow lingers for hours.<br>It is called the <b>afterglow</b>.' },
-    { at: 76.5, text: 'Catching it was Swift\'s job.<br>It could turn and look in about a minute.' },
+    { at: 76.5, text: 'Catching it was Swift\'s job.<br>It could turn and look within about two minutes.' },
     { at: 84, text: 'Some of these explosions forge gold and platinum.<br>Much of the gold on Earth may have been made this way.' },
     { at: 91.5, text: 'Hundreds of people in the US, UK and Italy built and ran Swift.<br>It carries the name of its leader, Neil Gehrels.' },
     { at: burstAt('221009A') - 1, burst: '221009A', text: 'October 2022: the brightest burst ever recorded.<br>Maybe a once-in-10,000-years event.' },

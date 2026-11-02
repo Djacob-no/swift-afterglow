@@ -3,7 +3,8 @@
     "id": "221009A",
     "title": "The BOAT",
     "blurb": "\"Brightest Of All Time\". The brightest gamma-ray burst ever recorded, estimated as a once-in-10,000-years event.",
-    "url": "https://www.jpl.nasa.gov/news/brightest-cosmic-explosion-ever-detected-had-other-unique-features/"
+    "url": "https://www.jpl.nasa.gov/news/brightest-cosmic-explosion-ever-detected-had-other-unique-features/",
+    "note": "Swift's BAT triggered at 14:10 UT, about 53 minutes after Fermi saw the main blast (GCN 32632, 32636), so the fluence below covers only the later emission."
   },
   {
     "id": "090423",
