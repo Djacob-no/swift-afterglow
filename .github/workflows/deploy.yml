@@ -1,0 +1,48 @@
+name: Build & deploy to Cloudflare Pages
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    # every 2 hours: refresh Swift's TLE from CelesTrak (their requested max rate) and redeploy
+    - cron: '17 */2 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Refresh TLE
+        # exit code 2 = CelesTrak has no record for 28485, which usually means it has reentered
+        run: |
+          set +e
+          node scripts/fetch-tle.mjs --force
+          code=$?
+          if [ $code -eq 2 ]; then echo "::warning::No TLE for Swift (28485). It may have reentered: check Space-Track/NASA, then flip public/data/status.json to memorial."; fi
+          if [ $code -ne 0 ]; then echo "::warning::TLE fetch failed (exit $code); deploying the last committed tle.json"; fi
+          exit 0
+
+      - run: npm run build
+
+      - name: Deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy dist --project-name=swift-afterglow --branch=main --commit-dirty=true

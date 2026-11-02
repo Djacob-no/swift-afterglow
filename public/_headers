@@ -1,0 +1,13 @@
+# Data changes on every deploy (TLE every 2 h, forecasts, status): always revalidate
+/data/*
+  Cache-Control: public, max-age=0, must-revalidate
+
+# Hashed bundles never change
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/textures/*
+  Cache-Control: public, max-age=604800
+
+/audio/*
+  Cache-Control: public, max-age=604800

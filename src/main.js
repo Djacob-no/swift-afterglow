@@ -734,7 +734,15 @@ function runTribute(dt) {
 // ---------- start screen, help, music ----------
 const music = new Audio('/audio/Travelers.mp3');
 music.loop = true;
-music.preload = 'auto';
+// don't let the 3 MB song compete with the scene's first load; start buffering once the page has settled
+music.preload = 'none';
+const bufferMusic = () => setTimeout(() => {
+  // load() resets the element, so never call it once playback has been requested (Play pressed early)
+  if (music.preload === 'auto' || !music.paused || music.played.length || state.view === 'tribute') return;
+  music.preload = 'auto';
+  music.load();
+}, 1500);
+if (document.readyState === 'complete') bufferMusic(); else addEventListener('load', bufferMusic, { once: true });
 const MUSIC_VOL = 0.6;
 let musicOn = localStorage.getItem('sa-music') !== 'off';
 function fadeMusic(to, ms = 1500) {
