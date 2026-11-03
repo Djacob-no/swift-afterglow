@@ -400,7 +400,7 @@ const localFmt = new Intl.DateTimeFormat(undefined, { weekday: 'short', hour: '2
 function updateLiveHud(nowMs) {
   const ageMs = nowMs - tleEpoch;
   const ageH = ageMs / 3600000;
-  $('tleAge').textContent = `${ageH.toFixed(1)} h`;
+  $('tleAge').textContent = `${ageH > 12 ? '~' : ''}${ageH.toFixed(1)} h`;
   $('alt').textContent = swift ? `${Math.round(swift.altKm)} km` : 'unavailable';
   const halfKm = Math.min(25 + 45 * ageH, 3000);
   $('unc').textContent = `${Math.round(halfKm).toLocaleString()} km`;
@@ -477,13 +477,15 @@ function focusBurst(i, jumpTime) {
 let flashUntil = -1;
 
 // ---------- picking ----------
-// Never show a position we can't stand behind: below 120 km, or TLE too old once the window is open
+// Never show a position we can't stand behind: below 120 km, or TLE too old once the window is open.
+// Space Force publishes Swift's elements only every ~12-18 h, so a 12 h limit hid the dot between
+// updates; the uncertainty arc already grows with TLE age, so 24 h keeps the display honest.
 let swift = null;
 const earliestWindow = Math.min(...PREDICTIONS.map((p) => Date.parse(p.start ?? p.center)));
 function swiftUsable(st, nowMs) {
   if (!st || st.altKm < MIN_ALT_KM) return null;
   const ageH = (nowMs - tleEpoch) / 3600000;
-  if (ageH > 48 || (nowMs >= earliestWindow && ageH > 12)) return null;
+  if (ageH > 48 || (nowMs >= earliestWindow && ageH > 24)) return null;
   return st;
 }
 const tip = $('tooltip');
