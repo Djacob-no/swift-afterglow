@@ -3,20 +3,20 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="description" content="Every gamma-ray burst NASA's Swift observatory caught in 22 years, replayed in 3D as Swift falls back to Earth. A tribute." />
+  <meta name="description" content="Every gamma-ray burst NASA's Swift observatory caught in 22 years, replayed in 3D. A tribute and farewell to Swift, 2004–2026." />
   <link rel="canonical" href="https://swift.djacob.no/" />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://swift.djacob.no/" />
   <meta property="og:site_name" content="Swift Afterglow" />
   <meta property="og:title" content="Swift Afterglow: every gamma-ray burst NASA's Swift saw" />
-  <meta property="og:description" content="Every gamma-ray burst NASA's Swift observatory caught in 22 years, replayed in 3D as Swift falls back to Earth. A tribute." />
+  <meta property="og:description" content="Every gamma-ray burst NASA's Swift observatory caught in 22 years, replayed in 3D. A tribute and farewell to Swift, 2004–2026." />
   <meta property="og:image" content="https://swift.djacob.no/og.jpg" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
   <meta property="og:image:alt" content="A night sky full of glowing gamma-ray bursts around Earth, titled Swift Afterglow" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Swift Afterglow: every gamma-ray burst NASA's Swift saw" />
-  <meta name="twitter:description" content="Every gamma-ray burst NASA's Swift observatory caught in 22 years, replayed in 3D as Swift falls back to Earth. A tribute." />
+  <meta name="twitter:description" content="Every gamma-ray burst NASA's Swift observatory caught in 22 years, replayed in 3D. A tribute and farewell to Swift, 2004–2026." />
   <meta name="twitter:image" content="https://swift.djacob.no/og.jpg" />
   <title>Swift Afterglow: every gamma-ray burst NASA's Swift saw</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Ccircle cx=%228%22 cy=%228%22 r=%225%22 fill=%22%23ff9a4a%22/%3E%3C/svg%3E" />
@@ -28,7 +28,7 @@
   <div id="about" role="dialog" aria-modal="true" aria-labelledby="aboutTitle">
     <div class="about-card start-card">
       <h2 id="aboutTitle" class="start-title">SWIFT <span>AFTERGLOW</span></h2>
-      <p class="start-line">A tribute to NASA's Swift telescope, which spent 22 years watching stars die, and falls back to Earth this week.</p>
+      <p class="start-line">A tribute to NASA's Swift telescope, which spent 22 years watching stars die. It came home on 4 November 2026.</p>
       <button id="aboutPlay" class="about-play">▶ Play</button>
       <div class="about-fine">Best with sound 🔊 · music from <em>Outer Wilds</em></div>
       <button id="skipToData" class="linkbtn">Skip to the data →</button>
@@ -43,7 +43,7 @@
         <i class="ico ico-swift"></i>
         <div>
           <h4>Swift is a space telescope</h4>
-          <p>NASA launched Swift in 2004. Its job was to spot the biggest explosions in the universe and point its cameras at them within about two minutes. It was built to last 2 years and kept working for 22. Its orbit has now decayed, and <b>it will burn up in Earth's atmosphere this week.</b></p>
+          <p>NASA launched Swift in 2004. Its job was to spot the biggest explosions in the universe and point its cameras at them within about two minutes. It was built to last 2 years and kept working for 22. As its orbit decayed it fell back to Earth, and <b>on 4 November 2026 it burned up in the atmosphere.</b></p>
         </div>
       </section>
 
@@ -66,8 +66,8 @@
       <section>
         <i class="ico ico-earth"></i>
         <div>
-          <h4>The planet is Earth, and the white dot is Swift</h4>
-          <p>The dot shows roughly where Swift is right now, about 210 km up and dropping. Nobody knows exactly when or where it will come down, so the site shows every forecast side by side.</p>
+          <h4>The planet is Earth, where Swift came home</h4>
+          <p>Swift watched the sky from about 600 km up for most of its life. Earth here turns and is lit as it is right now; the sky around it is everything Swift saw.</p>
         </div>
       </section>
 
@@ -116,7 +116,6 @@
       <button id="watchTribute" class="ghost">▶ Watch the tribute</button>
       <button id="aboutOpen" class="ghost" title="What is this?">? What is this</button>
       <button id="muteToggle" class="ghost" title="Music on/off">♪ Music on</button>
-      <button id="modeToggle" class="ghost">Preview memorial mode</button>
     </div>
   </header>
 
@@ -140,35 +139,19 @@
     </div>
   </aside>
 
-  <aside id="live" class="panel">
-    <div class="live-head"><span class="pulse"></span> SWIFT · LIVE ORBIT</div>
-    <div class="stats">
-      <div><label>Altitude</label><b id="alt">≈210 km</b></div>
-      <div><label>TLE age</label><b id="tleAge">–</b></div>
-      <div><label>Position ±</label><b id="unc">–</b></div>
+  <aside id="memorial" class="panel" aria-labelledby="memName">
+    <div class="mem-kicker">In memory</div>
+    <div id="memName" class="mem-name">Neil Gehrels Swift Observatory</div>
+    <div class="mem-dates mono">2004-11-20 → <span id="memEnd">2026-11-04</span></div>
+    <div class="mem-body">
+      <p>Built to last two years, Swift worked for twenty-two. It caught <b data-total>2,046</b> gamma-ray bursts, often turning to look within about two minutes, and helped show where gold comes from, how far back in time light can reach us, and what dying stars leave behind.</p>
+      <p>Thank you to everyone who designed, built, launched and flew it: the engineers at NASA Goddard; the operations team at Penn State, who pointed it day and night; the instrument teams in the UK and Italy; the ground station at Malindi; and the astronomers around the world who chased its alerts. It carries the name of its leader, Neil Gehrels (1952–2017).</p>
+      <p class="mem-last">On 4 November 2026 it came home, burning up in the atmosphere it spent two decades looking beyond.</p>
     </div>
-    <div class="countdown">
-      <label>Earliest plausible reentry</label>
-      <div id="cdMain" class="big mono">–</div>
-      <ul id="cdList"></ul>
+    <div class="mem-links">
+      <a id="memReentryLink" target="_blank" rel="noopener">NASA: re-entry ↗</a>
+      <a id="memEndLink" target="_blank" rel="noopener">NASA: mission ends ↗</a>
     </div>
-    <div id="bands"></div>
-    <div class="row small">
-      <span>Orbit speed</span>
-      <div class="chips" id="warpChips">
-        <button data-w="1" class="on">real-time</button>
-        <button data-w="60">×60</button>
-        <button data-w="600">×600</button>
-      </div>
-    </div>
-    <p class="fine">TLE propagation is unreliable at ~200 km. The arc shows along-track uncertainty, not a reentry location.</p>
-  </aside>
-
-  <aside id="memorial" class="panel hidden">
-    <div class="mem-name">Neil Gehrels Swift Observatory</div>
-    <div class="mem-dates mono">2004-11-20 → <span id="memEnd">2026</span></div>
-    <p>22 years in orbit, more than ten times its design life. <span data-total>2,046</span> gamma-ray bursts caught.</p>
-    <a id="memLink" target="_blank" rel="noopener">NASA's statement →</a>
   </aside>
 
   <section id="detail" class="panel hidden"></section>
@@ -191,10 +174,9 @@
       <div id="count" class="mono"></div>
     </div>
   </footer>
-  <div id="credits">Unofficial tribute; not affiliated with or endorsed by NASA. Bursts: <a href="https://swift.gsfc.nasa.gov/archive/grb_table/" target="_blank" rel="noopener">Swift GRB Table</a> · Orbit: <a href="https://celestrak.org/" target="_blank" rel="noopener">CelesTrak</a> · Forecasts: <a href="https://aerospace.org/reentries/28485" target="_blank" rel="noopener">Aerospace CORDS</a>, <a href="https://tohuvavohu.com/swift-last-light/" target="_blank" rel="noopener">Michigan SWORD</a>, <a href="https://keeptrack.space/reentry-watch/reentry-28485" target="_blank" rel="noopener">KeepTrack</a> · Earth: <a href="https://visibleearth.nasa.gov/" target="_blank" rel="noopener">NASA Earth Observatory</a> · Stars: <a href="http://tdc-www.harvard.edu/catalogs/bsc5.html" target="_blank" rel="noopener">Yale Bright Star Catalogue</a><br>Music: “Travelers” by Andrew Prahlow, from <a href="https://annapurnainteractive.com/games/outer-wilds" target="_blank" rel="noopener"><em>Outer Wilds</em></a> (Mobius Digital / Annapurna Interactive).</div>
+  <div id="credits">Unofficial tribute; not affiliated with or endorsed by NASA. Bursts: <a href="https://swift.gsfc.nasa.gov/archive/grb_table/" target="_blank" rel="noopener">Swift GRB Table</a> · Earth: <a href="https://visibleearth.nasa.gov/" target="_blank" rel="noopener">NASA Earth Observatory</a> · Stars: <a href="http://tdc-www.harvard.edu/catalogs/bsc5.html" target="_blank" rel="noopener">Yale Bright Star Catalogue</a><br>Music: “Travelers” by Andrew Prahlow, from <a href="https://annapurnainteractive.com/games/outer-wilds" target="_blank" rel="noopener"><em>Outer Wilds</em></a> (Mobius Digital / Annapurna Interactive).</div>
 
   <div id="tooltip" class="hidden"></div>
-  <div id="swiftLabel">SWIFT</div>
 
   <script type="module" src="/src/main.js"></script>
 </body>

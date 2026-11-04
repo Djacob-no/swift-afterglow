@@ -9,11 +9,9 @@
     "preview": "vite preview",
     "data": "node scripts/build-data.mjs",
     "data:offline": "node scripts/build-data.mjs --offline",
-    "tle": "node scripts/fetch-tle.mjs",
     "prebuild": "node scripts/build-data.mjs --offline"
   },
   "dependencies": {
-    "satellite.js": "^7.1.0",
     "three": "^0.187.0"
   },
   "devDependencies": {

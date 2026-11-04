@@ -8,8 +8,6 @@ Status: **verified** = checked against the source during the 2026-11-02 data pas
 | What | Source | Notes |
 |---|---|---|
 | 2,046 bursts, positions, T90, fluence, redshift, instruments | [Swift GRB Table](https://swift.gsfc.nasa.gov/archive/grb_table/) (NASA GSFC / Swift Science Center) | Built by `scripts/build-data.mjs`; snapshot in `data/raw/grb_table.tsv`. Position = UVOT > XRT > BAT. 140809A has no position (counted, not drawn). |
-| Swift orbit | [CelesTrak GP, NORAD 28485](https://celestrak.org/NORAD/elements/gp.php?CATNR=28485&FORMAT=TLE) | `scripts/fetch-tle.mjs`; SGP4 via satellite.js. Hidden below 120 km or when TLE is stale. |
-| Reentry forecasts | [Aerospace CORDS](https://aerospace.org/reentries/28485), [Swift · Last Light](https://tohuvavohu.com/swift-last-light/) (Michigan SWORD), [KeepTrack](https://keeptrack.space/reentry-watch/reentry-28485) (Space-Track TIP), [FlyMarshall](https://fly-marshall.com/article/nasa-swift-observatory-reentry-nov6-swft06) (USSF) | Hand-maintained in `public/data/predictions.json`. Aerospace blocks automated reads and Last Light renders client-side: re-read both by hand before each deploy. |
 | Earth | NASA Earth Observatory: [Blue Marble NG, Dec 2004](https://visibleearth.nasa.gov/images/74218), [Black Marble 2016](https://visibleearth.nasa.gov/images/144898) | |
 | Stars | [Yale Bright Star Catalogue, 5th ed.](http://tdc-www.harvard.edu/catalogs/bsc5.html) (Hoffleit & Warren 1991) | V ≤ 6.5, 8,404 stars. Distribution page states no licence; cite as above. |
 | Music | "Travelers", Andrew Prahlow, *Outer Wilds* ([Annapurna](https://annapurnainteractive.com/games/outer-wilds)) | **Permission to use not yet confirmed.** |
@@ -33,7 +31,7 @@ Status: **verified** = checked against the source during the 2026-11-02 data pas
 | Hundreds of people in the US, UK and Italy built and ran Swift; named for Neil Gehrels | standard | NASA mission with UK and Italian partners; renamed Neil Gehrels Swift Observatory in Jan 2018 |
 | 221009A: brightest ever recorded, once in 10,000 years | verified | [JPL](https://www.jpl.nasa.gov/news/brightest-cosmic-explosion-ever-detected-had-other-unique-features/) ("blinded most gamma-ray instruments"); 10,000-yr rate per Burns et al. 2023 |
 | For 22 years, Swift never stopped watching | verified | Launch 2004-11-20; operations ended Oct 2026 ([NASA](https://science.nasa.gov/blogs/swift/2026/10/23/nasas-swift-mission-ends-ahead-of-re-entry/)) |
-| This week, it falls home | verified (2026-11-02) | Forecasts span Nov 3–6; revisit if reentry slips |
+| On 4 November 2026, Swift came home | date per forecasts | Reentry forecast for 4 Nov 2026 ([NASA, 2 Nov](https://science.nasa.gov/blogs/swift/2026/11/02/nasas-swift-observatory-to-re-enter-atmosphere/)); date set in `public/data/status.json`. Update if NASA's post-reentry confirmation gives a different day. |
 
 ## Highlights (`public/data/highlights.json`)
 All six ids exist in the table (the build fails otherwise); every source link returned 200 on 2026-11-02
@@ -45,6 +43,9 @@ fluence (740) covers only the later emission. This is noted in its detail panel.
 
 ## Coordinate checks (2026-11-02)
 - Polaris (BSC) parses to Dec +89.26°, Sirius to RA 101.29° / Dec −16.72°.
-- Swift's rendered dot converts back to −16.80°, −86.37°, against satellite.js's −16.90°, −86.37° (the gap is geodetic vs geocentric latitude).
 - Subsolar point at 11:19 UTC: 14.83°S, 6.1°E. The expected values are declination −14.9° and 6.1°E with the equation of time applied.
 - Camera aimed at 60°N 10°E shows southern Norway centred: the texture orientation is correct.
+
+## Memorial note (`index.html`, `#memorial`)
+Partners named: NASA Goddard (mission lead), Penn State (Mission Operations Center), UK and Italian instrument teams
+(XRT/UVOT: Leicester, MSSL; ASI/INAF), ASI's Malindi ground station. Neil Gehrels, PI, 1952–2017. Design life 2 years.

@@ -1,10 +1,11 @@
 # Swift Afterglow
 
 A three.js tribute to NASA's Neil Gehrels Swift Observatory: every gamma-ray burst in Swift's GRB table,
-replayed on the sky around a 3D Earth, with Swift's real (decaying) orbit and reentry forecasts.
+replayed on the sky around a 3D Earth, and a memorial to the people who built and flew it. Swift reentered
+on 4 November 2026; the live-orbit view was retired then.
 
 Two views: **Tribute** (Play on the start card: song-synced cinematic, cues in `src/cinematic.js`) and
-**Explore** (technical HUD: timeline, filters, burst details, live orbit panel).
+**Explore** (timeline, filters, burst details, memorial note).
 
 ```
 npm install
@@ -18,15 +19,13 @@ npm run build          # prebuild regenerates grbs.json from the committed snaps
 |---|---|
 | `npm run data` | Fetch NASA's Swift GRB table, refresh `data/raw/grb_table.tsv`, rebuild `grbs.json` + `highlights.json` (validates) |
 | `npm run data:offline` | Same, from the committed snapshot only |
-| `npm run tle` | Fetch Swift's latest TLE from CelesTrak into `tle.json` (refuses more often than every 2 h; `--force`) |
 | `node scripts/build-stars.mjs` | Rebuild `stars.json` from the Yale Bright Star Catalogue |
 
-Hand-maintained: `predictions.json` (refresh before each deploy) and `status.json`. Flip `mode` to `"memorial"`
-with `reentryTime` and `source` once Space-Track, NASA or Aerospace confirms reentry.
+Hand-maintained: `status.json` (reentry date and NASA source shown on the memorial card and in the last caption).
 
 ## Dev URL params
 `?cineAt=120` freeze the tribute at 120 s (no music) · `?intro=0` / `?info=0` open straight in Explore ·
-`?mode=memorial` · `?bloom=0` · `#grb=221009A` deep link.
+`?bloom=0` · `#grb=221009A` deep link.
 
 Unofficial tribute; not affiliated with or endorsed by NASA. Music: "Travelers" by Andrew Prahlow, from
 *Outer Wilds*. Permission to use it publicly is not yet confirmed.

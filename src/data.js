@@ -1,4 +1,4 @@
-// Loads the prebuilt data files from public/data (see scripts/build-data.mjs, fetch-tle.mjs, build-stars.mjs).
+// Loads the prebuilt data files from public/data (see scripts/build-data.mjs, build-stars.mjs).
 
 const DAY = 86400000;
 
@@ -9,8 +9,8 @@ async function getJSON(name) {
 }
 
 export async function loadData() {
-  const [grbs, highlights, predictions, tle, status, stars] = await Promise.all(
-    ['grbs', 'highlights', 'predictions', 'tle', 'status', 'stars'].map(getJSON),
+  const [grbs, highlights, status, stars] = await Promise.all(
+    ['grbs', 'highlights', 'status', 'stars'].map(getJSON),
   );
 
   const F = grbs.fields;
@@ -30,9 +30,6 @@ export async function loadData() {
   return {
     GRBS,
     HIGHLIGHTS: highlights,
-    PREDICTIONS: predictions.predictions,
-    PREDICTIONS_UPDATED: predictions.updated,
-    TLE: tle,
     STATUS: status,
     STARS: stars.rows,
     TIMELINE_START,

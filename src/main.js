@@ -6,19 +6,21 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { DEG, EQ_TO_THREE, radecToEq, eqToThree, gmst, sunDirEq, galacticPlane, eclipticPlane } from './astro.js';
 import { SONG_LEN, BOAT_FLASH_AT, PULLBACK, REPLAY, END_CARD_AT, SEQUENCE_END, energyAt, buildCues } from './cinematic.js';
-import { twoline2satrec, propagate, eciToGeodetic, degreesLat, degreesLong, gstime } from './sgp4.js';
 import { loadData } from './data.js';
 
-const { GRBS, HIGHLIGHTS, PREDICTIONS, TLE, STATUS, STARS, TIMELINE_START, SPAN_DAYS, TOTAL, DAY } = await loadData();
+const { GRBS, HIGHLIGHTS, STATUS, STARS, TIMELINE_START, SPAN_DAYS, TOTAL, DAY } = await loadData();
 const MISSION = {
   launch: '2004-11-20T17:16:00Z',
-  nasaStatement: 'https://science.nasa.gov/blogs/swift/2026/10/23/nasas-swift-mission-ends-ahead-of-re-entry/',
+  missionEnd: 'https://science.nasa.gov/blogs/swift/2026/10/23/nasas-swift-mission-ends-ahead-of-re-entry/',
+  reentry: STATUS.reentryTime ?? '2026-11-04',
+  reentrySource: STATUS.source ?? 'https://science.nasa.gov/blogs/swift/2026/11/02/nasas-swift-observatory-to-re-enter-atmosphere/',
 };
+const LONG_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const longDate = (iso) => { const d = new Date(iso.slice(0, 10) + 'T12:00:00Z'); return `${d.getUTCDate()} ${LONG_MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`; };
 // every place the page states the burst count reads it from the data
 document.querySelectorAll('[data-total]').forEach((el) => (el.textContent = TOTAL.toLocaleString('en-US')));
 
 const SKY_R = 50;
-const EARTH_KM = 6371;
 const DPR = Math.min(window.devicePixelRatio, 2);
 const BASE_DAYS_PER_SEC = SPAN_DAYS / 90; // 22 years in 90 s at 1x
 const $ = (id) => document.getElementById(id);
@@ -198,96 +200,13 @@ const sunUniform = { value: new THREE.Vector3(1, 0, 0) };
   scene.add(atm);
 }
 
-// ---------- Swift orbit: SGP4 from the latest TLE ----------
-// Geometry lives in a local frame: x = towards Swift, y = along-track, z = orbit normal, unit radius.
-// Each frame the plane's matrix is rebuilt from the propagated position/velocity and scaled to |r|.
-const satrec = twoline2satrec(TLE.line1, TLE.line2);
-const tleEpoch = Date.parse(TLE.epoch);
-const MIN_ALT_KM = 120; // below this SGP4 is meaningless: stop drawing
-function swiftState(date) {
-  const pv = propagate(satrec, date);
-  if (!pv || !pv.position || !pv.velocity || Number.isNaN(pv.position.x)) return null;
-  const geo = eciToGeodetic(pv.position, gstime(date));
-  return { r: pv.position, v: pv.velocity, altKm: geo.height, lat: degreesLat(geo.latitude), lon: degreesLong(geo.longitude) };
-}
-const orbitPlane = new THREE.Group();
-orbitPlane.matrixAutoUpdate = false;
-const spin = new THREE.Group();
-orbitPlane.add(spin);
-scene.add(orbitPlane);
-const _bx = new THREE.Vector3(), _by = new THREE.Vector3(), _bz = new THREE.Vector3(), _basis = new THREE.Matrix4();
-function placeOrbit(st) {
-  _bx.set(st.r.x, st.r.y, st.r.z);
-  const rKm = _bx.length();
-  _bx.normalize();
-  _bz.crossVectors(_bx, _by.set(st.v.x, st.v.y, st.v.z)).normalize();
-  _by.crossVectors(_bz, _bx);
-  _basis.makeBasis(_bx, _by, _bz).scale(_by.set(1, 1, 1).multiplyScalar(rKm / EARTH_KM));
-  orbitPlane.matrix.copy(EQ_TO_THREE).multiply(_basis);
-  orbitPlane.matrixWorldNeedsUpdate = true;
-}
-
-function glowTexture() {
-  const c = document.createElement('canvas'); c.width = c.height = 128;
-  const g = c.getContext('2d');
-  const grd = g.createRadialGradient(64, 64, 0, 64, 64, 64);
-  grd.addColorStop(0, 'rgba(255,255,255,1)');
-  grd.addColorStop(0.15, 'rgba(255,255,255,0.9)');
-  grd.addColorStop(0.35, 'rgba(140,240,220,0.35)');
-  grd.addColorStop(1, 'rgba(0,0,0,0)');
-  g.fillStyle = grd; g.fillRect(0, 0, 128, 128);
-  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
-}
-const swiftDot = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(), blending: THREE.AdditiveBlending, depthWrite: false, color: 0xffffff }));
-swiftDot.scale.setScalar(0.07);
-swiftDot.position.set(1, 0, 0);
-spin.add(swiftDot);
-
-// full orbit path, faint
-{
-  const pts = [];
-  for (let i = 0; i <= 256; i++) { const a = (i / 256) * Math.PI * 2; pts.push(new THREE.Vector3(Math.cos(a), Math.sin(a), 0)); }
-  orbitPlane.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),
-    new THREE.LineBasicMaterial({ color: 0x7ff0d8, transparent: true, opacity: 0.12, depthWrite: false })));
-}
-// fading trail (half an orbit behind the dot)
-{
-  const n = 160, pts = [], cols = [];
-  for (let i = 0; i <= n; i++) {
-    const f = i / n, a = -f * Math.PI;
-    pts.push(Math.cos(a), Math.sin(a), 0);
-    const k = Math.pow(1 - f, 2);
-    cols.push(0.5 * k, 0.95 * k, 0.85 * k);
-  }
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
-  geo.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
-  spin.add(new THREE.Line(geo, new THREE.LineBasicMaterial({ vertexColors: true, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false })));
-}
-// along-track uncertainty arc (tube, rebuilt when it grows)
-const arcMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, depthWrite: false });
-const arcMesh = new THREE.Mesh(new THREE.BufferGeometry(), arcMat);
-spin.add(arcMesh);
-let lastArc = -1;
-function updateArc(halfRad) {
-  if (Math.abs(halfRad - lastArc) < 0.002) return;
-  lastArc = halfRad;
-  const pts = [];
-  for (let i = 0; i <= 48; i++) { const a = -halfRad + (2 * halfRad * i) / 48; pts.push(new THREE.Vector3(Math.cos(a), Math.sin(a), 0)); }
-  arcMesh.geometry.dispose();
-  arcMesh.geometry = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 64, 0.007, 8, false);
-}
-
 // ---------- state ----------
 const params = new URLSearchParams(location.search);
 const state = {
   now: SPAN_DAYS, playing: false, speed: 1,
   filter: 'all', zOnly: false, selected: -1, hover: -1,
-  mode: params.get('mode') === 'memorial' ? 'memorial' : STATUS.mode,
-  warp: 1, orbitTime: Date.now(), warpOffset: 0,
   view: 'start',
 };
-const swiftWorld = new THREE.Vector3();
 
 // ---------- HUD: highlights ----------
 const hlList = $('highlights');
@@ -311,14 +230,6 @@ $('zToggle').onclick = () => {
   $('zToggle').classList.toggle('on', state.zOnly);
   grbUniforms.uZOnly.value = state.zOnly ? 1 : 0;
 };
-for (const b of $('warpChips').querySelectorAll('button')) {
-  b.onclick = () => {
-    state.warp = +b.dataset.w;
-    if (state.warp === 1) state.warpOffset = 0; // back to real time means back to *now*
-    $('warpChips').querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b));
-  };
-}
-
 // ---------- HUD: timeline ----------
 const scrubber = $('scrubber'), playBtn = $('play');
 {
@@ -347,78 +258,10 @@ scrubber.oninput = () => {
   setPlaying(false);
 };
 
-// ---------- HUD: mode ----------
-function applyMode() {
-  const mem = state.mode === 'memorial';
-  $('live').classList.toggle('hidden', mem);
-  $('memorial').classList.toggle('hidden', !mem);
-  $('swiftLabel').style.display = mem ? 'none' : '';
-  $('modeToggle').textContent = mem ? 'Back to live mode' : 'Preview memorial mode';
-  $('memEnd').textContent = STATUS.reentryTime ? STATUS.reentryTime.slice(0, 10) : '2026';
-  $('memLink').href = MISSION.nasaStatement;
-}
-$('modeToggle').onclick = () => {
-  state.mode = state.mode === 'memorial' ? 'live' : 'memorial';
-  applyMode();
-  if (state.mode === 'memorial') { state.now = 0; setPlaying(true); }
-};
-applyMode();
-
-// ---------- HUD: prediction bands ----------
-const bandStart = Date.parse('2026-11-02T00:00:00Z'), bandEnd = Date.parse('2026-11-07T12:00:00Z');
-const bandPct = (t) => ((t - bandStart) / (bandEnd - bandStart)) * 100;
-{
-  const el = $('bands');
-  let html = '';
-  for (const p of PREDICTIONS) {
-    const c = bandPct(Date.parse(p.center));
-    const label = `<span class="lbl">${p.source.replace(/ (CORDS|SWORD|TIP)$/, '')}</span>`;
-    if (p.start && p.end) {
-      const s = bandPct(Date.parse(p.start)), e = bandPct(Date.parse(p.end));
-      html += `<div class="band-row">${label}<div class="band-track">
-        <div class="band ${p.fuzzy ? 'fuzzy' : ''}" style="left:${s}%;width:${e - s}%" title="${esc(p.source)}: ${esc(p.note)}">
-        <div class="ctr" style="left:${((c - s) / (e - s)) * 100}%"></div></div></div></div>`;
-    } else {
-      // no usable window (e.g. TIP still weeks wide): nominal time only
-      html += `<div class="band-row">${label}<div class="band-track">
-        <div class="ctr solo" style="left:${c}%" title="${esc(p.source)}: ${esc(p.note)}"></div></div></div>`;
-    }
-  }
-  html += '<div class="axis">';
-  for (let d = 2; d <= 7; d++) html += `<span style="left:${bandPct(Date.UTC(2026, 10, d))}%">Nov ${d}</span>`;
-  html += '</div><div class="nowline" id="nowline"></div>';
-  el.innerHTML = html;
-}
-
-function fmtDur(ms) {
-  const neg = ms < 0; ms = Math.abs(ms);
-  const h = Math.floor(ms / 3600000), m = Math.floor((ms % 3600000) / 60000), s = Math.floor((ms % 60000) / 1000);
-  const str = `${h}h ${String(m).padStart(2, '0')}m ${String(s).padStart(2, '0')}s`;
-  return neg ? `${str} ago` : `T− ${str}`;
-}
-const localFmt = new Intl.DateTimeFormat(undefined, { weekday: 'short', hour: '2-digit', minute: '2-digit' });
-function updateLiveHud(nowMs) {
-  const ageMs = nowMs - tleEpoch;
-  const ageH = ageMs / 3600000;
-  $('tleAge').textContent = `${ageH > 12 ? '~' : ''}${ageH.toFixed(1)} h`;
-  $('alt').textContent = swift ? `${Math.round(swift.altKm)} km` : 'unavailable';
-  const halfKm = Math.min(25 + 45 * ageH, 3000);
-  $('unc').textContent = `${Math.round(halfKm).toLocaleString()} km`;
-  const earliest = earliestWindow;
-  const real = Date.now();
-  $('cdMain').textContent = real < earliest ? fmtDur(earliest - real) : 'window open';
-  if (!$('cdList').children.length) {
-    $('cdList').innerHTML = PREDICTIONS.map((p) =>
-      `<li><a href="${esc(p.url)}" target="_blank" rel="noopener">${esc(p.source)}</a><span class="mono" title="${esc(p.note)}"></span></li>`).join('');
-  }
-  PREDICTIONS.forEach((p, i) => {
-    const c = Date.parse(p.center);
-    $('cdList').children[i].querySelector('span').textContent = `${localFmt.format(c)} · ${fmtDur(c - real)}`;
-  });
-  const nl = $('nowline');
-  nl.style.left = `calc(66px + (100% - 66px) * ${THREE.MathUtils.clamp(bandPct(real), 0, 100) / 100})`;
-  return halfKm;
-}
+// ---------- memorial note ----------
+$('memEnd').textContent = MISSION.reentry.slice(0, 10);
+$('memReentryLink').href = MISSION.reentrySource;
+$('memEndLink').href = MISSION.missionEnd;
 
 // ---------- burst detail ----------
 const detail = $('detail');
@@ -427,6 +270,7 @@ const fmtErr = (g) => (g.errArcsec == null ? '?' : g.posSrc === 'BAT' ? `${(g.er
 function showDetail(i) {
   state.selected = i;
   grbUniforms.uSelected.value = i;
+  $('memorial').classList.toggle('hidden', i >= 0); // the burst card takes its place
   if (i < 0) { detail.classList.add('hidden'); history.replaceState(null, '', location.pathname + location.search); return; }
   const g = GRBS[i];
   const hl = HIGHLIGHTS.find((h) => h.id === g.id);
@@ -477,17 +321,6 @@ function focusBurst(i, jumpTime) {
 let flashUntil = -1;
 
 // ---------- picking ----------
-// Never show a position we can't stand behind: below 120 km, or TLE too old once the window is open.
-// Space Force publishes Swift's elements only every ~12-18 h, so a 12 h limit hid the dot between
-// updates; the uncertainty arc already grows with TLE age, so 24 h keeps the display honest.
-let swift = null;
-const earliestWindow = Math.min(...PREDICTIONS.map((p) => Date.parse(p.start ?? p.center)));
-function swiftUsable(st, nowMs) {
-  if (!st || st.altKm < MIN_ALT_KM) return null;
-  const ageH = (nowMs - tleEpoch) / 3600000;
-  if (ageH > 48 || (nowMs >= earliestWindow && ageH > 24)) return null;
-  return st;
-}
 const tip = $('tooltip');
 const tmp = new THREE.Vector3();
 function rayHitsEarth(from, to) {
@@ -544,18 +377,19 @@ const boatDir = grbPos[boatIdx].clone().normalize();
 const introFrom = boatDir.clone().multiplyScalar(SKY_R - 9);
 const introLook = boatDir.clone().multiplyScalar(SKY_R);
 const ORIGIN = new THREE.Vector3();
-function swiftSideView(dist, aheadMs = 8000) {
-  // a camera spot on Swift's side of Earth, so the live dot is in view
-  const st = swiftState(new Date(state.orbitTime + aheadMs));
-  const p = st ? eqToThree([st.r.x, st.r.y, st.r.z], 1).normalize() : new THREE.Vector3(1, 0, 0);
-  return p.add(new THREE.Vector3(0, 0.45, 0)).normalize().multiplyScalar(dist);
+function earthView(dist) {
+  // a camera spot just off the day side, so the pullback lands on a lit Earth with the terminator in view
+  const sun = eqToThree(sunDirEq(new Date()), 1, new THREE.Vector3());
+  const side = new THREE.Vector3(0, 1, 0).cross(sun).normalize();
+  if (side.lengthSq() < 0.01) side.set(1, 0, 0);
+  return sun.addScaledVector(side, 0.8).add(new THREE.Vector3(0, 0.45, 0)).normalize().multiplyScalar(dist);
 }
-let introTo = swiftSideView(6.5);
+let introTo = earthView(6.5);
 const currentLook = introLook.clone();
 const REPLAY_DPS = SPAN_DAYS / (REPLAY[1] - REPLAY[0]);
 const replayTimeOf = (days) => REPLAY[0] + (days / SPAN_DAYS) * (REPLAY[1] - REPLAY[0]);
 const burstAt = (id) => replayTimeOf((GRBS.find((g) => g.id === id).t - TIMELINE_START) / DAY);
-const cues = buildCues({ total: TOTAL, burstAt, memorial: state.mode === 'memorial', reentryDate: (STATUS.reentryTime ?? '').slice(0, 10) });
+const cues = buildCues({ total: TOTAL, burstAt, memorial: true, reentryDate: longDate(MISSION.reentry) });
 const cineAt = params.has('cineAt') ? +params.get('cineAt') : null; // debug: freeze the tribute at t seconds
 const cine = { t: 0, done: false, orbiting: false, userZoomed: false, cue: null };
 const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
@@ -567,7 +401,7 @@ function setView(v) {
   document.body.classList.add('v-' + v);
   // hidden views must not take clicks or keyboard focus
   for (const id of ['cineUi', 'endCard']) $(id).inert = v !== 'tribute';
-  for (const id of ['title', 'left', 'live', 'memorial', 'timeline', 'credits', 'detail']) $(id).inert = v !== 'explore';
+  for (const id of ['title', 'left', 'memorial', 'timeline', 'credits', 'detail']) $(id).inert = v !== 'explore';
 }
 setView('start');
 camera.position.copy(introFrom);
@@ -584,7 +418,7 @@ function enterTribute({ withMusic = true } = {}) {
   showDetail(-1);
   setPlaying(false);
   slew = null;
-  introTo = swiftSideView(6.5, 11500);
+  introTo = earthView(6.5);
   camera.position.copy(introFrom);
   currentLook.copy(introLook);
   camera.lookAt(introLook);
@@ -606,7 +440,7 @@ function enterExplore() {
   if (fromTribute && cine.t < REPLAY[0]) state.now = SPAN_DAYS; // left before the replay began: show the full sky
   setPlaying(false);
   // still out in the sky (intro or start screen)? fly back to Earth
-  if (camera.position.length() > 12) slew = { from: camera.position.clone(), to: swiftSideView(6.5), t: 0, lookFrom: currentLook.clone() };
+  if (camera.position.length() > 12) slew = { from: camera.position.clone(), to: earthView(6.5), t: 0, lookFrom: currentLook.clone() };
   else { controls.enabled = true; controls.target.set(0, 0, 0); }
 }
 
@@ -826,7 +660,6 @@ if (hashIdx >= 0 || params.get('intro') === '0' || params.get('info') === '0') {
 // ---------- loop ----------
 const clock = new THREE.Clock();
 const yearEl = $('year'), countEl = $('count');
-let hudTimer = 0, arcHalf = 0;
 const grbDays = GRBS.map((g) => (g.t - TIMELINE_START) / DAY);
 function countAt(now) {
   let lo = 0, hi = grbDays.length;
@@ -835,25 +668,18 @@ function countAt(now) {
 }
 
 function frame() {
-  const rawDt = clock.getDelta();
-  const dt = Math.min(rawDt, 0.1); // animation step; capped so a long pause doesn't make things jump
+  const dt = Math.min(clock.getDelta(), 0.1); // capped so a long pause doesn't make things jump
 
-  // orbit clock: wall-clock time plus whatever extra the ×60/×600 warp has added. Uses the uncapped
-  // frame time, so after a backgrounded tab the dot is back where Swift really is.
-  state.warpOffset += rawDt * 1000 * (state.warp - 1);
-  state.orbitTime = Date.now() + state.warpOffset;
-  const od = new Date(state.orbitTime);
+  // Earth turns and is lit as it is right now
+  const od = new Date();
   earth.rotation.y = gmst(od);
   eqToThree(sunDirEq(od), 1, sunUniform.value);
-  swift = swiftUsable(swiftState(od), state.orbitTime);
-  orbitPlane.visible = !!swift && state.mode !== 'memorial';
-  if (swift) placeOrbit(swift);
 
   if (state.view === 'tribute') runTribute(dt);
   else if (state.view === 'explore') {
     if (state.playing) {
       state.now += dt * BASE_DAYS_PER_SEC * state.speed;
-      if (state.now >= SPAN_DAYS) { state.now = SPAN_DAYS; setPlaying(false); if (state.mode === 'memorial') playBtn.textContent = '▶ Replay'; }
+      if (state.now >= SPAN_DAYS) { state.now = SPAN_DAYS; setPlaying(false); }
     } else if (flashUntil > 0) {
       state.now += dt * BASE_DAYS_PER_SEC * state.speed * 0.6;
       if (state.now >= flashUntil) flashUntil = -1;
@@ -879,27 +705,6 @@ function frame() {
   }
   if (controls.enabled) controls.update(dt); // dt makes auto-rotate frame-rate independent
 
-  // live HUD (4 Hz) + uncertainty arc
-  hudTimer -= dt;
-  if (hudTimer <= 0 && state.mode === 'live') {
-    hudTimer = 0.25;
-    arcHalf = updateLiveHud(state.orbitTime);
-    updateArc(arcHalf / (EARTH_KM + (swift?.altKm ?? 200)));
-  }
-
-  // Swift label
-  const lbl = $('swiftLabel');
-  if (state.mode === 'live' && state.view === 'explore' && swift) {
-    swiftDot.getWorldPosition(swiftWorld);
-    proj.copy(swiftWorld).project(camera);
-    const hidden = proj.z > 1 || rayHitsEarth(camera.position, swiftWorld);
-    lbl.style.opacity = hidden ? 0 : 1;
-    lbl.style.left = (proj.x * 0.5 + 0.5) * innerWidth + 'px';
-    lbl.style.top = (-proj.y * 0.5 + 0.5) * innerHeight + 'px';
-    lbl.innerHTML = `SWIFT<small>${Math.round(swift?.altKm ?? 0)} km · ±${Math.round(arcHalf).toLocaleString()} km</small>`;
-    swiftDot.scale.setScalar(0.09 + 0.015 * Math.sin(performance.now() / 300));
-  } else lbl.style.opacity = 0;
-
   composer.render();
   requestAnimationFrame(frame);
 }
@@ -912,4 +717,4 @@ addEventListener('resize', () => {
   composer.setSize(innerWidth, innerHeight);
 });
 
-if (import.meta.env.DEV || params.has('debug')) window.__sa = { camera, grbUniforms, grbPos, boatIdx, state, GRBS, music, cine, controls, label, swiftState, getSwift: () => swift, gmst, sunDirEq, eqToThree, radecToEq, earth };
+if (import.meta.env.DEV || params.has('debug')) window.__sa = { camera, grbUniforms, grbPos, boatIdx, state, GRBS, music, cine, controls, label, gmst, sunDirEq, eqToThree, radecToEq, earth };

@@ -1,6 +1,6 @@
 {
-  "mode": "live",
-  "reentryTime": null,
-  "source": null,
-  "note": "Flip mode to \"memorial\" and set reentryTime (ISO) + source URL by hand once Space-Track, NASA or Aerospace confirms reentry."
+  "mode": "memorial",
+  "reentryTime": "2026-11-04",
+  "source": "https://science.nasa.gov/blogs/swift/2026/11/02/nasas-swift-observatory-to-re-enter-atmosphere/",
+  "note": "Swift reentered on 4 Nov 2026. Date only; update reentryTime/source if NASA publishes an exact post-reentry time."
 }

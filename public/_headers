@@ -1,4 +1,4 @@
-# Data changes on every deploy (TLE every 2 h, forecasts, status): always revalidate
+# Data can change on any deploy: always revalidate
 /data/*
   Cache-Control: public, max-age=0, must-revalidate
 
